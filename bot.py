@@ -1,6 +1,6 @@
-# 1. जरूरी लाइब्रेरीज चेक और इंस्टॉल करना
 import subprocess
 import sys
+import os
 
 def install_packages():
     packages = ["internetarchive", "requests", "Pillow"]
@@ -10,37 +10,39 @@ def install_packages():
         except subprocess.CalledProcessError:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package, "--user"])
 
-print("सिस्टम सेटअप चेक किया जा रहा है...")
+print(" [सिस्टम] डिजिटल लाइब्रेरी बैकग्राउंड सर्विस शुरू हो रही है...")
 install_packages()
-print("सिस्टम पूरी तरह तैयार है!\n")
 
-# 2. मुख्य ऑटोमेशन स्क्रिप्ट
 import time
 import requests
 import random
-import os
 import json
 import shutil
 import hashlib
 import internetarchive as ia
 from PIL import Image, ImageDraw, ImageFont
 
-ACCESS_KEY = "6yJQhusUsuUme95s"
-SECRET_KEY = "cBEIKuzxUjPxQbXI"
+# GitHub Secrets से सुरक्षित रूप से कीज़ उठाना
+ACCESS_KEY = os.environ.get("IA_ACCESS_KEY")
+SECRET_KEY = os.environ.get("IA_SECRET_KEY")
 PROGRESS_FILE = "archive_progress.json"
 
 def load_progress():
     if os.path.exists(PROGRESS_FILE):
         with open(PROGRESS_FILE, "r") as f:
             try:
-                return json.load(f).get("processed_identifiers", [])
+                data = json.load(f)
+                return data.get("processed_identifiers", []), data.get("total_success", 0)
             except json.JSONDecodeError:
-                return []
-    return []
+                return [], 0
+    return [], 0
 
-def save_progress(processed_list):
+def save_progress(processed_list, total_success):
     with open(PROGRESS_FILE, "w") as f:
-        json.dump({"processed_identifiers": processed_list}, f, indent=4)
+        json.dump({
+            "total_success": total_success,
+            "processed_identifiers": processed_list
+        }, f, indent=4)
 
 def create_book_cover(title, author, output_path):
     width, height = 800, 1200
@@ -104,24 +106,29 @@ def create_book_cover(title, author, output_path):
     
     image.save(output_path)
 
-# 3. मास्टर लिस्ट फेच करना
 query = 'language:Hindi AND year:[* TO 1950] AND format:PDF'
-print("इंटरनेट आर्काइव से शुद्ध पीडीएफ वाली हिंदी किताबों की लिस्ट निकाली जा रही है...")
+print(" [डेटा] इंटरनेट आर्काइव से हिंदी किताबों की मास्टर लिस्ट खंगाली जा रही है...")
 
 try:
     search_results = ia.search_items(query, fields=['identifier', 'title', 'creator'])
     identifiers = [doc for doc in search_results]
-    print(f"कुल {len(identifiers)} प्रीमियम किताबें मिल चुकी हैं!\n")
+    print(f" [सफलता] कुल {len(identifiers)} शुद्ध पीडीएफ किताबें डेटाबेस में मिली हैं!\n")
 except Exception as e:
-    print(f"लिस्ट फेच करने में एरर आया: {e}")
+    print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}")
     sys.exit()
 
-processed_identifiers_list = load_progress()
-if processed_identifiers_list:
-    print(f"नोट: कुल {len(processed_identifiers_list)} किताबें पहले ही अपलोड हो चुकी हैं, उन्हें छोड़कर आगे बढ़ रहे हैं...\n")
+processed_identifiers_list, total_success_count = load_progress()
+print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें सफलताપूर्वक लाइब्रेरी में जोड़ी जा चुकी हैं।\n")
 
-# 4. ऑटोमैटिक प्रोसेसिंग लूप
+# एक बार में केवल 1 या 2 किताबें ही प्रोसेस होंगी ताकि इंसान की तरह धीमी और सुरक्षित गति बनी रहे
+session_processed = 0
+MAX_BOOKS_THIS_SESSION = 2 
+
 for index, doc_data in enumerate(identifiers, start=1):
+    if session_processed >= MAX_BOOKS_THIS_SESSION:
+        print(" [जानकारी] इस सेशन का इंसानी कोटा पूरा हो गया है। सिस्टम अब आराम करेगा और अगले शेड्यूल पर खुद जागेगा।")
+        break
+
     identifier = doc_data['identifier']
     
     if identifier in processed_identifiers_list:
@@ -143,18 +150,19 @@ for index, doc_data in enumerate(identifiers, start=1):
         formatted_title = f"{orig_title[:200]} - {orig_creator[:100]} | शिवम डिजिटल ई लाइब्रेरी"
         new_identifier = f"shivam_hindi_{identifier}"
         
-        print(f"[{index}/{len(identifiers)}] प्रोसेस हो रही किताब: {formatted_title}")
+        print(f"--------------------------------------------------")
+        print(f" [प्रक्रिया] किताब उठाई गई ({index}/{len(identifiers)}): {orig_title[:50]}...")
         
         files_to_upload = []
-        
         pdf_downloaded = False
+        
         for file_info in source_item.files:
             file_name = file_info.get('name', '')
             if file_name.lower().endswith('.pdf'):
                 pdf_url = f"https://archive.org/download/{identifier}/{file_name}"
                 local_pdf_path = os.path.join(temp_dir, file_name)
                 
-                print(f"  - PDF डाउनलोड हो रही है...")
+                print(f"   -> मूल पीडीएफ फाइल डाउनलोड की जा रही है...")
                 r = requests.get(pdf_url, stream=True, timeout=60)
                 if r.status_code == 200:
                     with open(local_pdf_path, 'wb') as f:
@@ -166,17 +174,17 @@ for index, doc_data in enumerate(identifiers, start=1):
                     break
         
         if not pdf_downloaded:
-            print(f"  - PDF नहीं मिलने के कारण यह किताब स्किप की जा रही है।")
+            print(f"   -> [छोड़ा गया] इस किताब की सही पीडीएफ नहीं मिली, आगे बढ़ रहे हैं।")
             processed_identifiers_list.append(identifier)
-            save_progress(processed_identifiers_list)
+            save_progress(processed_identifiers_list, total_success_count)
             continue
         
         custom_cover_path = os.path.join(temp_dir, "custom_cover.jpg")
-        print(f"  - कवर इमेज बनाई जा रही है...")
+        print(f"   -> किताब के लिए नया और आकर्षक कवर डिजाइन किया जा रहा है...")
         create_book_cover(orig_title, orig_creator, custom_cover_path)
         files_to_upload.append(custom_cover_path)
         
-        print(f"  - इंटरनेट आर्काइव पर अपलोड की जा रही है ({new_identifier})...")
+        print(f"   -> इंटरनेट आर्काइव पर सुरक्षित रूप से अपलोड की जा रही है ({new_identifier})...")
         ia.upload(
             new_identifier,
             files=files_to_upload,
@@ -193,24 +201,27 @@ for index, doc_data in enumerate(identifiers, start=1):
             },
             verify=True
         )
-        print("  - अपलोड पूरी तरह सफल!\n")
+        print("   -> [सफलता] किताब सफलतापूर्वक अपलोड हो चुकी है!\n")
         
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
             
         processed_identifiers_list.append(identifier)
-        save_progress(processed_identifiers_list)
+        total_success_count += 1
+        save_progress(processed_identifiers_list, total_success_count)
+        session_processed += 1
         
     except Exception as e:
-        print(f"  - एरर आया: {e}. सुरक्षित रूप से आगे बढ़ रहे हैं...")
+        print(f"   -> [चेतावनी] अपलोड के दौरान छोटी सी अड़चन आई: {e}. सुरक्षित तरीके से हैंडल किया जा रहा है...")
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
         time.sleep(30)
         continue
 
-    # हर अपलोड के बाद छोटा और सेफ गैप (ताकि सर्वर ब्लॉक न करे)
-    random_gap = random.randint(600, 1200) # 10 से 20 मिनट का गैप ताकि फोन से भी आसानी से हैंडल हो सके
-    print(f"अगली किताब के लिए {random_gap // 60} मिनट का गैप लिया जा रहा है...\n")
-    time.sleep(random_gap)
+    # अगर सेशन में एक से ज्यादा किताब बची है, तो इंसानी गैप (1 से 1.5 घंटे यानी 3600 से 5400 सेकंड) दें
+    if session_processed < MAX_BOOKS_THIS_SESSION:
+        human_gap = random.randint(3600, 5400) 
+        print(f" [विराम] इंसान की तरह अगला काम करने से पहले {human_gap // 60} मिनट का नेचुरल गैップ लिया जा रहा है...\n")
+        time.sleep(human_gap)
 
-print("शानदार! वर्तमान सेशन की सभी किताबें सफलतापूर्वक अपलोड हो चुकी हैं।")
+print(" [समाप्ति] वर्तमान सेशन का काम शांतिपूर्ण ढंग से पूरा हो गया है।")
