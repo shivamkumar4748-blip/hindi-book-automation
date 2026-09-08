@@ -22,7 +22,6 @@ import hashlib
 import internetarchive as ia
 from PIL import Image, ImageDraw, ImageFont
 
-# GitHub Secrets से सुरक्षित रूप से कीज़ उठाना
 ACCESS_KEY = os.environ.get("IA_ACCESS_KEY")
 SECRET_KEY = os.environ.get("IA_SECRET_KEY")
 PROGRESS_FILE = "archive_progress.json"
@@ -106,13 +105,23 @@ def create_book_cover(title, author, output_path):
     
     image.save(output_path)
 
-query = 'language:Hindi AND year:[* TO 1950] AND format:PDF'
-print(" [डेटा] इंटरनेट आर्काइव से हिंदी किताबों की मास्टर लिस्ट खंगाली जा रही है...")
+print(" [डेटा] इंटरनेट आर्काइव एडवांस्ड API से हिंदी किताबों की लिस्ट निकाली जा रही है...")
+
+# डायरेक्ट HTTP रिक्वेस्ट का उपयोग ताकि हैंग न हो
+search_url = "https://archive.org/advancedsearch.php"
+params = {
+    "q": "language:Hindi AND year:[* TO 1950] AND format:PDF",
+    "fl[]": "identifier,title,creator",
+    "rows": "50",
+    "page": "1",
+    "output": "json"
+}
 
 try:
-    search_results = ia.search_items(query, fields=['identifier', 'title', 'creator'])
-    identifiers = [doc for doc in search_results]
-    print(f" [सफलता] कुल {len(identifiers)} शुद्ध पीडीएफ किताबें डेटाबेस में मिली हैं!\n")
+    response = requests.get(search_url, params=params, timeout=20)
+    data = response.json()
+    identifiers = data.get("response", {}).get("docs", [])
+    print(f" [सफलता] कुल {len(identifiers)} शुद्ध पीडीएफ किताबें मिल चुकी हैं!\n")
 except Exception as e:
     print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}")
     sys.exit()
@@ -120,16 +129,15 @@ except Exception as e:
 processed_identifiers_list, total_success_count = load_progress()
 print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें सफलताપूर्वक लाइब्रेरी में जोड़ी जा चुकी हैं।\n")
 
-# एक बार में केवल 1 या 2 किताबें ही प्रोसेस होंगी ताकि इंसान की तरह धीमी और सुरक्षित गति बनी रहे
 session_processed = 0
 MAX_BOOKS_THIS_SESSION = 2 
 
 for index, doc_data in enumerate(identifiers, start=1):
     if session_processed >= MAX_BOOKS_THIS_SESSION:
-        print(" [जानकारी] इस सेशन का इंसानी कोटा पूरा हो गया है। सिस्टम अब आराम करेगा और अगले शेड्यूल पर खुद जागेगा।")
+        print(" [जानकारी] इस सेशन का इंसानी कोटा पूरा हो गया है। सिस्टम अब आराम करेगा।")
         break
 
-    identifier = doc_data['identifier']
+    identifier = doc_data.get('identifier')
     
     if identifier in processed_identifiers_list:
         continue
@@ -212,16 +220,15 @@ for index, doc_data in enumerate(identifiers, start=1):
         session_processed += 1
         
     except Exception as e:
-        print(f"   -> [चेतावनी] अपलोड के दौरान छोटी सी अड़चन आई: {e}. सुरक्षित तरीके से हैंडल किया जा रहा है...")
+        print(f"   -> [चेतावनी] अपलोड के दौरान अड़चन आई: {e}. सुरक्षित तरीके से आगे बढ़ रहे हैं...")
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        time.sleep(30)
+        time.sleep(15)
         continue
 
-    # अगर सेशन में एक से ज्यादा किताब बची है, तो इंसानी गैप (1 से 1.5 घंटे यानी 3600 से 5400 सेकंड) दें
     if session_processed < MAX_BOOKS_THIS_SESSION:
         human_gap = random.randint(3600, 5400) 
-        print(f" [विराम] इंसान की तरह अगला काम करने से पहले {human_gap // 60} मिनट का नेचुरल गैップ लिया जा रहा है...\n")
+        print(f" [विराम] अगला काम करने से पहले {human_gap // 60} मिनट का नेचुरल गैप लिया जा रहा है...\n")
         time.sleep(human_gap)
 
 print(" [समाप्ति] वर्तमान सेशन का काम शांतिपूर्ण ढंग से पूरा हो गया है।")
