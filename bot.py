@@ -105,23 +105,14 @@ def create_book_cover(title, author, output_path):
     
     image.save(output_path)
 
-print(" [डेटा] इंटरनेट आर्काइव एडवांस्ड API से हिंदी किताबों की लिस्ट निकाली जा रही है...")
-
-# डायरेक्ट HTTP रिक्वेस्ट का उपयोग ताकि हैंग न हो
-search_url = "https://archive.org/advancedsearch.php"
-params = {
-    "q": "language:Hindi AND year:[* TO 1950] AND format:PDF",
-    "fl[]": "identifier,title,creator",
-    "rows": "50",
-    "page": "1",
-    "output": "json"
-}
+print(" [डेटा] इंटरनेट आर्काइव से हिंदी किताबों की लिस्ट निकाली जा रही है...")
+query = 'language:Hindi AND year:[* TO 1950] AND format:PDF'
 
 try:
-    response = requests.get(search_url, params=params, timeout=20)
-    data = response.json()
-    identifiers = data.get("response", {}).get("docs", [])
-    print(f" [सफलता] कुल {len(identifiers)} शुद्ध पीडीएफ किताबें मिल चुकी हैं!\n")
+    # सुरक्षित तरीके से ऑफिशियल लाइब्रेरी का उपयोग ताकि तुरंत रिस्पॉन्स मिले
+    search_results = ia.search_items(query, fields=['identifier', 'title', 'creator'])
+    identifiers = [doc for doc in search_results]
+    print(f" [सफलता] कुल {len(identifiers)} प्रीमियम किताबें मिल चुकी हैं!\n")
 except Exception as e:
     print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}")
     sys.exit()
