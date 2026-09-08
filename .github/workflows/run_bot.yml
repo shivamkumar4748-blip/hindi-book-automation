@@ -1,18 +1,18 @@
-name: Shivam Hindi Book Auto-Uploader
+name: Shivam Digital Library Life-Time Bot
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # हर 6 घंटे में यह खुद-ब-खुद जागेगा
+  workflow_dispatch:      # जब मन करे मैन्युअल रूप से चेक करने के लिए बटन
 
 jobs:
-  run-bot:
+  run-library-bot:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python Environment
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
@@ -21,10 +21,15 @@ jobs:
         run: |
           pip install internetarchive requests Pillow
 
-      - name: Run Automation Script
+      - name: Run Human-Like Automation Script
         env:
           IA_ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
           IA_SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           python bot.py
-          
+
+      - name: Save Progress Logs Back to Repository
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Auto-update library progress logs [skip ci]"
+          file_pattern: archive_progress.json
