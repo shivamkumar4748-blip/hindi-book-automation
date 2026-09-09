@@ -1,9 +1,14 @@
 {
-    "total_success": 4,
+    "total_success": 9,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
         "eparlib.nic.in.764081",
-        "eparlib.nic.in.763301"
+        "eparlib.nic.in.763301",
+        "psalmsproverbsin00calc",
+        "eparlib.nic.in.761627",
+        "eparlib.nic.in.760843",
+        "eparlib.nic.in.760856",
+        "eparlib.nic.in.760077"
     ]
 }
