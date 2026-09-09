@@ -111,7 +111,7 @@ search_url = "https://archive.org/advancedsearch.php"
 params = {
     "q": "language:Hindi AND year:[* TO 1950] AND format:PDF",
     "fl[]": "identifier,title,creator",
-    "rows": "5000",  # बिना किसी कटौती के पूरा डेटा फेच करने के लिए
+    "rows": "5000",
     "page": "1",
     "output": "json"
 }
@@ -122,16 +122,6 @@ try:
     identifiers = data.get("response", {}).get("docs", [])
     total_found = len(identifiers)
     print(f" [सफलता] कुल {total_found} किताबें मिल चुकी हैं!\n", flush=True)
-    
-    print("--------------------------------------------------")
-    print(" [मास्टर लिस्ट] खोजी गई सभी किताबों की सूची:")
-    print("--------------------------------------------------")
-    for idx, doc in enumerate(identifiers, start=1):
-        t = doc.get('title', 'अज्ञात शीर्षक')
-        c = doc.get('creator', 'अज्ञात लेखक')
-        print(f"{idx}. {t} — ({c})", flush=True)
-    print("--------------------------------------------------\n", flush=True)
-
 except Exception as e:
     print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}", flush=True)
     sys.exit()
@@ -140,11 +130,11 @@ processed_identifiers_list, total_success_count = load_progress()
 print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें लाइब्रेरी में जुड़ चुकी हैं।", flush=True)
 
 session_processed = 0
-MAX_BOOKS_THIS_SESSION = 5  # अपनी जरूरत के हिसाब से इसे बढ़ा भी सकता है
+MAX_BOOKS_THIS_SESSION = 2  # सुरक्षा और टाइम-लिमिट के कारण प्रति सेशन 2 किताबें
 
 for index, doc_data in enumerate(identifiers, start=1):
     if session_processed >= MAX_BOOKS_THIS_SESSION:
-        print(" [जानकारी] इस सेशन का कोटा पूरा हो गया है।", flush=True)
+        print(" [जानकारी] इस सेशन का कोटा पूरा हो गया है। सिस्टम सुरक्षित रूप से बंद हो रहा है।", flush=True)
         break
 
     identifier = doc_data.get('identifier')
@@ -168,7 +158,7 @@ for index, doc_data in enumerate(identifiers, start=1):
         new_identifier = f"shivam_hindi_{identifier}"
         
         print(f"--------------------------------------------------", flush=True)
-        print(f" [प्रक्रिया] ({index}/{total_found}) किताब प्रोसेस हो रही है...", flush=True)
+        print(f" [प्रक्रिया] ({index}/{total_found}) किताब प्रोसेस हो रही है: {orig_title[:40]}...", flush=True)
         
         files_to_upload = []
         pdf_downloaded = False
@@ -232,12 +222,13 @@ for index, doc_data in enumerate(identifiers, start=1):
         print(f"   -> [चेतावनी] दिक्कत: {e}. आगे बढ़ रहे हैं...", flush=True)
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        time.sleep(10)
+        time.sleep(60)
         continue
 
     if session_processed < MAX_BOOKS_THIS_SESSION:
-        human_gap = random.randint(30, 60) 
-        print(f" [विराम] अगला काम...", flush=True)
+        # एक किताब से दूसरी किताब के बीच 1 से 1.5 घंटे (3600 से 5400 सेकंड) का वास्तविक इंसानी गैप
+        human_gap = random.randint(3600, 5400) 
+        print(f" [विराम] अगली किताब उठाने से पहले {human_gap // 60} मिनट का नेचुरल रेस्ट लिया जा रहा है...\n", flush=True)
         time.sleep(human_gap)
 
-print(" [समाप्ति] सेशन पूरा हुआ।", flush=True)
+print(" [समाप्ति] वर्तमान सेशन शांतिपूर्वक पूरा हुआ।", flush=True)
