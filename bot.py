@@ -10,7 +10,7 @@ def install_packages():
         except subprocess.CalledProcessError:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package, "--user"])
 
-print(" [सिस्टम] डिजिटल लाइब्रेरी बैकग्राउंड सर्विस शुरू हो रही है...")
+print(" [सिस्टम] सेटअप चेक किया जा रहा है...", flush=True)
 install_packages()
 
 import time
@@ -105,31 +105,38 @@ def create_book_cover(title, author, output_path):
     
     image.save(output_path)
 
-print(" [डेटा] इंटरनेट आर्काइव से हिंदी किताबों की लिस्ट निकाली जा रही है...")
-query = 'language:Hindi AND year:[* TO 1950] AND format:PDF'
+print(" [डेटा] इंटरनेट आर्काइव एपीआई से डायरेक्ट किताबें खोजी जा रही हैं...", flush=True)
+
+search_url = "https://archive.org/advancedsearch.php"
+params = {
+    "q": "language:Hindi AND year:[* TO 1950] AND format:PDF",
+    "fl[]": "identifier,title,creator",
+    "rows": "100",
+    "page": "1",
+    "output": "json"
+}
 
 try:
-    # सुरक्षित तरीके से ऑफिशियल लाइब्रेरी का उपयोग ताकि तुरंत रिस्पॉन्स मिले
-    search_results = ia.search_items(query, fields=['identifier', 'title', 'creator'])
-    identifiers = [doc for doc in search_results]
-    print(f" [सफलता] कुल {len(identifiers)} प्रीमियम किताबें मिल चुकी हैं!\n")
+    response = requests.get(search_url, params=params, timeout=30)
+    data = response.json()
+    identifiers = data.get("response", {}).get("docs", [])
+    print(f" [सफलता] कुल {len(identifiers)} किताबें मिल चुकी हैं!", flush=True)
 except Exception as e:
-    print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}")
+    print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}", flush=True)
     sys.exit()
 
 processed_identifiers_list, total_success_count = load_progress()
-print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें सफलताપूर्वक लाइब्रेरी में जोड़ी जा चुकी हैं।\n")
+print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें लाइब्रेरी में जुड़ चुकी हैं।", flush=True)
 
 session_processed = 0
 MAX_BOOKS_THIS_SESSION = 2 
 
 for index, doc_data in enumerate(identifiers, start=1):
     if session_processed >= MAX_BOOKS_THIS_SESSION:
-        print(" [जानकारी] इस सेशन का इंसानी कोटा पूरा हो गया है। सिस्टम अब आराम करेगा।")
+        print(" [जानकारी] इस सेशन का कोटा पूरा हो गया है।", flush=True)
         break
 
     identifier = doc_data.get('identifier')
-    
     if identifier in processed_identifiers_list:
         continue
         
@@ -149,8 +156,8 @@ for index, doc_data in enumerate(identifiers, start=1):
         formatted_title = f"{orig_title[:200]} - {orig_creator[:100]} | शिवम डिजिटल ई लाइब्रेरी"
         new_identifier = f"shivam_hindi_{identifier}"
         
-        print(f"--------------------------------------------------")
-        print(f" [प्रक्रिया] किताब उठाई गई ({index}/{len(identifiers)}): {orig_title[:50]}...")
+        print(f"--------------------------------------------------", flush=True)
+        print(f" [प्रक्रिया] ({index}/{len(identifiers)}) किताब: {orig_title[:50]}...", flush=True)
         
         files_to_upload = []
         pdf_downloaded = False
@@ -161,7 +168,7 @@ for index, doc_data in enumerate(identifiers, start=1):
                 pdf_url = f"https://archive.org/download/{identifier}/{file_name}"
                 local_pdf_path = os.path.join(temp_dir, file_name)
                 
-                print(f"   -> मूल पीडीएफ फाइल डाउनलोड की जा रही है...")
+                print(f"   -> पीडीएफ डाउनलोड हो रही है...", flush=True)
                 r = requests.get(pdf_url, stream=True, timeout=60)
                 if r.status_code == 200:
                     with open(local_pdf_path, 'wb') as f:
@@ -173,17 +180,17 @@ for index, doc_data in enumerate(identifiers, start=1):
                     break
         
         if not pdf_downloaded:
-            print(f"   -> [छोड़ा गया] इस किताब की सही पीडीएफ नहीं मिली, आगे बढ़ रहे हैं।")
+            print(f"   -> [छोड़ा गया] पीडीएफ नहीं मिली।", flush=True)
             processed_identifiers_list.append(identifier)
             save_progress(processed_identifiers_list, total_success_count)
             continue
         
         custom_cover_path = os.path.join(temp_dir, "custom_cover.jpg")
-        print(f"   -> किताब के लिए नया और आकर्षक कवर डिजाइन किया जा रहा है...")
+        print(f"   -> कवर डिजाइन हो रहा है...", flush=True)
         create_book_cover(orig_title, orig_creator, custom_cover_path)
         files_to_upload.append(custom_cover_path)
         
-        print(f"   -> इंटरनेट आर्काइव पर सुरक्षित रूप से अपलोड की जा रही है ({new_identifier})...")
+        print(f"   -> इंटरनेट आर्काइव पर अपलोड हो रही है...", flush=True)
         ia.upload(
             new_identifier,
             files=files_to_upload,
@@ -200,7 +207,7 @@ for index, doc_data in enumerate(identifiers, start=1):
             },
             verify=True
         )
-        print("   -> [सफलता] किताब सफलतापूर्वक अपलोड हो चुकी है!\n")
+        print(f"   -> [सफलता] अपलोड पूरी हुई!\n", flush=True)
         
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
@@ -211,15 +218,15 @@ for index, doc_data in enumerate(identifiers, start=1):
         session_processed += 1
         
     except Exception as e:
-        print(f"   -> [चेतावनी] अपलोड के दौरान अड़चन आई: {e}. सुरक्षित तरीके से आगे बढ़ रहे हैं...")
+        print(f"   -> [चेतावनी] दिक्कत: {e}. आगे बढ़ रहे हैं...", flush=True)
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        time.sleep(15)
+        time.sleep(10)
         continue
 
     if session_processed < MAX_BOOKS_THIS_SESSION:
-        human_gap = random.randint(3600, 5400) 
-        print(f" [विराम] अगला काम करने से पहले {human_gap // 60} मिनट का नेचुरल गैप लिया जा रहा है...\n")
+        human_gap = random.randint(30, 60) 
+        print(f" [विराम] अगला काम...", flush=True)
         time.sleep(human_gap)
 
-print(" [समाप्ति] वर्तमान सेशन का काम शांतिपूर्ण ढंग से पूरा हो गया है।")
+print(" [समाप्ति] सेशन पूरा हुआ।", flush=True)
