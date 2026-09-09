@@ -105,22 +105,33 @@ def create_book_cover(title, author, output_path):
     
     image.save(output_path)
 
-print(" [डेटा] इंटरनेट आर्काइव एपीआई से डायरेक्ट किताबें खोजी जा रही हैं...", flush=True)
+print(" [डेटा] इंटरनेट आर्काइव एपीआई से पूरी हिंदी किताबों की सूची खोजी जा रही है...", flush=True)
 
 search_url = "https://archive.org/advancedsearch.php"
 params = {
     "q": "language:Hindi AND year:[* TO 1950] AND format:PDF",
     "fl[]": "identifier,title,creator",
-    "rows": "100",
+    "rows": "5000",  # बिना किसी कटौती के पूरा डेटा फेच करने के लिए
     "page": "1",
     "output": "json"
 }
 
 try:
-    response = requests.get(search_url, params=params, timeout=30)
+    response = requests.get(search_url, params=params, timeout=60)
     data = response.json()
     identifiers = data.get("response", {}).get("docs", [])
-    print(f" [सफलता] कुल {len(identifiers)} किताबें मिल चुकी हैं!", flush=True)
+    total_found = len(identifiers)
+    print(f" [सफलता] कुल {total_found} किताबें मिल चुकी हैं!\n", flush=True)
+    
+    print("--------------------------------------------------")
+    print(" [मास्टर लिस्ट] खोजी गई सभी किताबों की सूची:")
+    print("--------------------------------------------------")
+    for idx, doc in enumerate(identifiers, start=1):
+        t = doc.get('title', 'अज्ञात शीर्षक')
+        c = doc.get('creator', 'अज्ञात लेखक')
+        print(f"{idx}. {t} — ({c})", flush=True)
+    print("--------------------------------------------------\n", flush=True)
+
 except Exception as e:
     print(f" [एरर] लिस्ट फेच करने में समस्या आई: {e}", flush=True)
     sys.exit()
@@ -129,7 +140,7 @@ processed_identifiers_list, total_success_count = load_progress()
 print(f" [स्टेटस] अब तक कुल {total_success_count} किताबें लाइब्रेरी में जुड़ चुकी हैं।", flush=True)
 
 session_processed = 0
-MAX_BOOKS_THIS_SESSION = 2 
+MAX_BOOKS_THIS_SESSION = 5  # अपनी जरूरत के हिसाब से इसे बढ़ा भी सकता है
 
 for index, doc_data in enumerate(identifiers, start=1):
     if session_processed >= MAX_BOOKS_THIS_SESSION:
@@ -157,7 +168,7 @@ for index, doc_data in enumerate(identifiers, start=1):
         new_identifier = f"shivam_hindi_{identifier}"
         
         print(f"--------------------------------------------------", flush=True)
-        print(f" [प्रक्रिया] ({index}/{len(identifiers)}) किताब: {orig_title[:50]}...", flush=True)
+        print(f" [प्रक्रिया] ({index}/{total_found}) किताब प्रोसेस हो रही है...", flush=True)
         
         files_to_upload = []
         pdf_downloaded = False
