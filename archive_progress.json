@@ -1,5 +1,5 @@
 {
-    "total_success": 43,
+    "total_success": 45,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -43,6 +43,8 @@
         "eparlib.nic.in.760486",
         "eparlib.nic.in.761578",
         "eparlib.nic.in.760638",
-        "eparlib.nic.in.760639"
+        "eparlib.nic.in.760639",
+        "eparlib.nic.in.761625",
+        "eparlib.nic.in.761633"
     ]
 }
