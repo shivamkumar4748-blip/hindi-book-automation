@@ -1,5 +1,5 @@
 {
-    "total_success": 61,
+    "total_success": 63,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -61,6 +61,8 @@
         "ghs2.mahaatmaganbhi0000unse_w0l6",
         "annual-report-indian-agricultural-research-institute_1908-03_9",
         "gandhi.satyagrahamemams0000srir",
-        "wordofgodconcern00unse"
+        "wordofgodconcern00unse",
+        "bub_gb_In5JAAAAYAAJ",
+        "annual-report-indian-agricultural-research-institute_1941-06-30"
     ]
 }
