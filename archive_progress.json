@@ -1,5 +1,5 @@
 {
-    "total_success": 65,
+    "total_success": 67,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -65,6 +65,8 @@
         "bub_gb_In5JAAAAYAAJ",
         "annual-report-indian-agricultural-research-institute_1941-06-30",
         "eparlib.nic.in.762319",
-        "eparlib.nic.in.762335"
+        "eparlib.nic.in.762335",
+        "eparlib.nic.in.216",
+        "eparlib.nic.in.759949"
     ]
 }
