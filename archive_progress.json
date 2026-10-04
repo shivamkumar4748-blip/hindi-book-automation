@@ -1,5 +1,5 @@
 {
-    "total_success": 73,
+    "total_success": 75,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -73,6 +73,8 @@
         "gss.secondbookofsans0000drra",
         "rkas.1709.upanishadbhashya0000hari",
         "eparlib.nic.in.761815",
-        "eparlib.nic.in.761843"
+        "eparlib.nic.in.761843",
+        "gandhi.satyagrahamimams0000rang",
+        "gandhi.sriramanaprastha0000nage"
     ]
 }
