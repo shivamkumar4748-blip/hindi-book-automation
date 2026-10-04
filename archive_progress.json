@@ -1,5 +1,5 @@
 {
-    "total_success": 69,
+    "total_success": 71,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -69,6 +69,8 @@
         "eparlib.nic.in.216",
         "eparlib.nic.in.759949",
         "gss.e61.timeline0000pand_r2u2",
-        "gss.e69.dasakumaracharit0000mrka"
+        "gss.e69.dasakumaracharit0000mrka",
+        "gss.secondbookofsans0000drra",
+        "rkas.1709.upanishadbhashya0000hari"
     ]
 }
