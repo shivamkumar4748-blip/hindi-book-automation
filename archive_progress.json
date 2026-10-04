@@ -1,5 +1,5 @@
 {
-    "total_success": 75,
+    "total_success": 77,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -75,6 +75,8 @@
         "eparlib.nic.in.761815",
         "eparlib.nic.in.761843",
         "gandhi.satyagrahamimams0000rang",
-        "gandhi.sriramanaprastha0000nage"
+        "gandhi.sriramanaprastha0000nage",
+        "bub_gb_pmUVAAAAQAAJ",
+        "kachahrtechnica00carngoog"
     ]
 }
