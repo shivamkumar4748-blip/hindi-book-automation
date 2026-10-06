@@ -1,30 +1,86 @@
-name: Phase 2 - Direct Server Entry & Install Zoya Brain (32B)
+name: Phase 2 - Inject Lock & Install Zoya Brain (32B)
 
 on:
   workflow_dispatch:
 
 jobs:
-  direct-install:
+  inject-and-install:
     runs-on: ubuntu-latest
     steps:
-      - name: Connect Directly and Setup Zoya Brain
+      - name: 1. Setup OCI CLI & Config (The Main Gate)
+        run: |
+          pip install oci-cli
+          mkdir -p ~/.oci
+          
+          # Writing config securely using exact details from screenshot
+          cat << 'EOF' > ~/.oci/config
+          [DEFAULT]
+          user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
+          fingerprint=1b:50:d2:34:b2:c1:05:05:6c:47:4f:3a:6d:6b:55
+          tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
+          region=ap-mumbai-1
+          key_file=/home/runner/.oci/api_key.pem
+          EOF
+          chmod 600 ~/.oci/config
+          
+          # Writing API Key securely
+          cat << 'EOF' > ~/.oci/api_key.pem
+          ${{ secrets.OCI_API_KEY }}
+          EOF
+          chmod 600 ~/.oci/api_key.pem
+
+      - name: 2. Generate Public Key (The Lock)
+        run: |
+          cat << 'EOF' > ssh_key.pem
+          ${{ secrets.OCI_SSH_KEY }}
+          EOF
+          chmod 600 ssh_key.pem
+          ssh-keygen -y -f ssh_key.pem > public_key.pub
+          
+          PUB_KEY=$(cat public_key.pub)
+          echo "NEW_PUB_KEY<<EOF" >> $GITHUB_ENV
+          echo "$PUB_KEY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 3. Inject Lock into Server
+        run: |
+          export PATH=$PATH:/home/runner/bin
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
+          COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa"
+          
+          echo "Finding Server ID..."
+          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output || echo "")
+          
+          if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
+            echo "❌ Error: Server not found."
+            exit 1
+          fi
+          
+          echo "Server Found: $INSTANCE_OCID"
+          echo "Injecting new lock..."
+          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_PUB_KEY }}\"}" --force
+          
+          echo "Lock injected! Waiting 60 seconds for Oracle to sync..."
+          sleep 60
+
+      - name: 4. SSH Connect, Setup Anti-Crash & Install Qwen 32B
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ubuntu
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            echo "=== 🚀 INSIDE THE SERVER DIRECTLY ==="
+            echo "=== 🚀 INSIDE THE SERVER ==="
             sudo apt-get update -y
             
             echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== Setting 21GB Cgroup Hard Limit ==="
+            echo "=== Setting 22GB Cgroup Hard Limit ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
             cat << 'EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             [Service]
-            MemoryMax=21G
+            MemoryMax=22G
             EOF
             
             sudo systemctl daemon-reload
@@ -34,5 +90,4 @@ jobs:
             echo "=== Pulling Qwen 2.5 32B Model ==="
             ollama pull qwen2.5:32b
             
-            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED! ==="
-            
+            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS INSTALLED! ==="
