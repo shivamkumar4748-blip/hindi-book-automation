@@ -11,22 +11,30 @@ jobs:
         run: |
           echo "=== Setting up OCI CLI to break the door from outside ==="
           pip install oci-cli
-          
           mkdir -p ~/.oci
-          echo "[DEFAULT]" > ~/.oci/config
-          echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
-          echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
-          echo "tenancy=${{ secrets.OCI_TENANCY_OCID }}" >> ~/.oci/config
-          echo "region=ap-mumbai-1" >> ~/.oci/config
-          echo "key_file=/home/runner/.oci/api_key.pem" >> ~/.oci/config
           
-          echo "${{ secrets.OCI_API_KEY }}" > ~/.oci/api_key.pem
+          # Using EOF to perfectly preserve all formatting and line breaks
+          cat << 'EOF' > ~/.oci/config
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=ap-mumbai-1
+          key_file=/home/runner/.oci/api_key.pem
+          EOF
+          
+          # Safely writing the API Key without breaking its structure
+          cat << 'EOF' > ~/.oci/api_key.pem
+          ${{ secrets.OCI_API_KEY }}
+          EOF
           chmod 600 ~/.oci/api_key.pem
 
       - name: 2. Generate Public Key from SSH Secret
         run: |
           echo "=== Extracting Public Key (The Lock) ==="
-          echo "${{ secrets.OCI_SSH_KEY }}" > ssh_key.pem
+          cat << 'EOF' > ssh_key.pem
+          ${{ secrets.OCI_SSH_KEY }}
+          EOF
           chmod 600 ssh_key.pem
           ssh-keygen -y -f ssh_key.pem > public_key.pub
           PUB_KEY=$(cat public_key.pub)
@@ -37,10 +45,18 @@ jobs:
       - name: 3. Find Zoya's Server ID & Inject Lock
         run: |
           echo "=== Finding Server and Injecting Lock ==="
-          # Find instance ID using Tenancy OCID as compartment
+          export PATH=$PATH:/home/runner/bin
           COMPARTMENT="${{ secrets.OCI_TENANCY_OCID }}"
-          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --query "data[0].id" --raw-output)
-          echo "Target Server ID: $INSTANCE_OCID"
+          
+          # Safe extraction of Instance ID
+          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output)
+          
+          if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
+            echo "❌ Error: Could not find the server. OCI CLI authentication failed or Compartment is empty."
+            exit 1
+          fi
+          
+          echo "✅ Target Server ID Found: $INSTANCE_OCID"
           
           # Force update metadata with new SSH key
           oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_PUB_KEY }}\"}" --force
@@ -56,28 +72,21 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
             echo "=== 🚀 ENTERED THE SERVER SUCCESSFULLY ==="
-            
-            # Update OS
             sudo apt-get update -y
             
-            # Install Ollama
             echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            # 🔴 CRASH PREVENTION SYSTEM (Systemd Cgroups) 🔴
             echo "=== Configuring 22GB Memory Limit (Anti-Crash) ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
             echo "[Service]" | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             echo "MemoryMax=22G" | sudo tee -a /etc/systemd/system/ollama.service.d/memory-limit.conf
             
-            # Reload and Start Service
             sudo systemctl daemon-reload
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            # Pull the 32B Model
             echo "=== Downloading Qwen-2.5-32B Model (~19.5GB) ==="
-            echo "Tokens are now unlimited, but OS is protected from crashing."
             ollama pull qwen2.5:32b
             
             echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED & PROTECTED! ==="
