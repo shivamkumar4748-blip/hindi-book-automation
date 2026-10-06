@@ -1,18 +1,18 @@
-name: Phase 2 - Inject Lock & Install Zoya Brain (32B)
+name: Founder's Override - Build Key, Lock & Install Zoya
 
 on:
   workflow_dispatch:
 
 jobs:
-  inject-and-install:
+  creator-mode:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup OCI CLI & Config (The Main Gate)
+      - name: 1. Setup Main Gate (Using Founder's Details)
         run: |
           pip install oci-cli
           mkdir -p ~/.oci
           
-          # Writing config securely using exact details from screenshot
+          # Writing config securely using exact details
           cat << 'EOF' > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
@@ -23,71 +23,71 @@ jobs:
           EOF
           chmod 600 ~/.oci/config
           
-          # Writing API Key securely
+          # Writing API Key securely from your existing secret
           cat << 'EOF' > ~/.oci/api_key.pem
           ${{ secrets.OCI_API_KEY }}
           EOF
           chmod 600 ~/.oci/api_key.pem
 
-      - name: 2. Generate Public Key (The Lock)
+      - name: 2. Forge the New Key & Lock (Creator's Will)
         run: |
-          cat << 'EOF' > ssh_key.pem
-          ${{ secrets.OCI_SSH_KEY }}
-          EOF
-          chmod 600 ssh_key.pem
-          ssh-keygen -y -f ssh_key.pem > public_key.pub
+          ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
           
-          PUB_KEY=$(cat public_key.pub)
-          echo "NEW_PUB_KEY<<EOF" >> $GITHUB_ENV
-          echo "$PUB_KEY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "=========================================================="
+          echo "🚨 FOUNDER'S NEW ROOM KEY (PRIVATE KEY) 🚨"
+          echo "COPY EVERYTHING BELOW THIS LINE TO SAVE IT IN YOUR PHONE:"
+          echo "=========================================================="
+          cat zoya_key
+          echo "=========================================================="
+          echo "=== END OF PRIVATE KEY ==="
 
-      - name: 3. Inject Lock into Server
+      - name: 3. Smash & Replace the Old Lock via Main Gate
         run: |
           export PATH=$PATH:/home/runner/bin
           export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
           COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa"
           
-          echo "Finding Server ID..."
+          echo "Finding the server..."
           INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output || echo "")
           
           if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
-            echo "❌ Error: Server not found."
+            echo "❌ Failed to find the server!"
             exit 1
           fi
           
-          echo "Server Found: $INSTANCE_OCID"
+          PUB_KEY=$(cat zoya_key.pub)
           echo "Injecting new lock..."
-          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_PUB_KEY }}\"}" --force
+          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"$PUB_KEY\"}" --force
           
-          echo "Lock injected! Waiting 60 seconds for Oracle to sync..."
+          echo "✅ New lock installed! Waiting 60 seconds for it to fully sync..."
           sleep 60
 
-      - name: 4. SSH Connect, Setup Anti-Crash & Install Qwen 32B
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.OCI_HOST }}
-          username: ubuntu
-          key: ${{ secrets.OCI_SSH_KEY }}
-          script: |
-            echo "=== 🚀 INSIDE THE SERVER ==="
+      - name: 4. Enter Room & Install Zoya's Brain (Qwen 32B)
+        run: |
+          chmod 600 zoya_key
+          echo "Opening the door with the new key..."
+          
+          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
+            echo "=== 🚀 INSIDE THE ROOM DIRECTLY ==="
             sudo apt-get update -y
             
             echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== Setting 22GB Cgroup Hard Limit ==="
+            echo "=== Applying 21GB Crash Prevention Limit ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
-            cat << 'EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
+            cat << 'INNER_EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             [Service]
-            MemoryMax=22G
-            EOF
+            MemoryMax=21G
+            INNER_EOF
             
             sudo systemctl daemon-reload
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            echo "=== Pulling Qwen 2.5 32B Model ==="
+            echo "=== Installing Zoya's Brain (Qwen 2.5 32B) ==="
+            echo "This will take a few minutes..."
             ollama pull qwen2.5:32b
             
-            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS INSTALLED! ==="
+            echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
+          SSH_EOF
