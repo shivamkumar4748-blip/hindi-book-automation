@@ -7,23 +7,23 @@ jobs:
   creator-mode:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup Main Gate (Using Founder's Details)
+      - name: 1. Setup Main Gate (Using Correct Fingerprint)
         run: |
           pip install oci-cli
           mkdir -p ~/.oci
           
-          # Writing config securely using exact details
+          # Writing config securely using the EXACT matched fingerprint
           cat << 'EOF' > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
-          fingerprint=1b:50:d2:34:b2:c1:05:05:6c:47:4f:3a:6d:6b:55
+          fingerprint=1b:11:13:06:1e:8c:f5:8d:45:8f:0d:fd:c1:3c:2a
           tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
           EOF
           chmod 600 ~/.oci/config
           
-          # Writing API Key securely from your existing secret
+          # Your API Key is perfectly fine. Extracting it cleanly.
           cat << 'EOF' > ~/.oci/api_key.pem
           ${{ secrets.OCI_API_KEY }}
           EOF
@@ -91,3 +91,4 @@ jobs:
             
             echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
           SSH_EOF
+          
