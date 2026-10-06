@@ -1,31 +1,84 @@
-name: Phase 2 - Install Ollama & Qwen 32B
+name: Phase 2 - Hack Lock & Install Zoya Brain (32B)
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy-zoya:
+  inject-and-install:
     runs-on: ubuntu-latest
     steps:
-      - name: Connect to Server and Install Ollama
+      - name: 1. Setup Oracle OCI CLI (The Main Gate)
+        run: |
+          echo "=== Setting up OCI CLI to break the door from outside ==="
+          pip install oci-cli
+          
+          mkdir -p ~/.oci
+          echo "[DEFAULT]" > ~/.oci/config
+          echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
+          echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
+          echo "tenancy=${{ secrets.OCI_TENANCY_OCID }}" >> ~/.oci/config
+          echo "region=ap-mumbai-1" >> ~/.oci/config
+          echo "key_file=/home/runner/.oci/api_key.pem" >> ~/.oci/config
+          
+          echo "${{ secrets.OCI_API_KEY }}" > ~/.oci/api_key.pem
+          chmod 600 ~/.oci/api_key.pem
+
+      - name: 2. Generate Public Key from SSH Secret
+        run: |
+          echo "=== Extracting Public Key (The Lock) ==="
+          echo "${{ secrets.OCI_SSH_KEY }}" > ssh_key.pem
+          chmod 600 ssh_key.pem
+          ssh-keygen -y -f ssh_key.pem > public_key.pub
+          PUB_KEY=$(cat public_key.pub)
+          echo "NEW_PUB_KEY<<EOF" >> $GITHUB_ENV
+          echo "$PUB_KEY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 3. Find Zoya's Server ID & Inject Lock
+        run: |
+          echo "=== Finding Server and Injecting Lock ==="
+          # Find instance ID using Tenancy OCID as compartment
+          COMPARTMENT="${{ secrets.OCI_TENANCY_OCID }}"
+          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --query "data[0].id" --raw-output)
+          echo "Target Server ID: $INSTANCE_OCID"
+          
+          # Force update metadata with new SSH key
+          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_PUB_KEY }}\"}" --force
+          
+          echo "✅ Lock successfully changed! Waiting 60 seconds for Oracle cloud-init to sync..."
+          sleep 60
+
+      - name: 4. SSH Connect, Setup Anti-Crash & Install Qwen 32B
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ubuntu
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            echo "=== 1. System Update ==="
+            echo "=== 🚀 ENTERED THE SERVER SUCCESSFULLY ==="
+            
+            # Update OS
             sudo apt-get update -y
             
-            echo "=== 2. Installing Ollama ==="
+            # Install Ollama
+            echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== 3. Starting Ollama Service ==="
-            sudo systemctl enable ollama
-            sudo systemctl start ollama
+            # 🔴 CRASH PREVENTION SYSTEM (Systemd Cgroups) 🔴
+            echo "=== Configuring 22GB Memory Limit (Anti-Crash) ==="
+            sudo mkdir -p /etc/systemd/system/ollama.service.d
+            echo "[Service]" | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
+            echo "MemoryMax=22G" | sudo tee -a /etc/systemd/system/ollama.service.d/memory-limit.conf
             
-            echo "=== 4. Pulling Qwen-2.5-32B Model ==="
-            echo "Note: This is a ~19GB model. OCI internet is extremely fast, but it will still take a few minutes."
+            # Reload and Start Service
+            sudo systemctl daemon-reload
+            sudo systemctl enable ollama
+            sudo systemctl restart ollama
+            
+            # Pull the 32B Model
+            echo "=== Downloading Qwen-2.5-32B Model (~19.5GB) ==="
+            echo "Tokens are now unlimited, but OS is protected from crashing."
             ollama pull qwen2.5:32b
             
-            echo "=== SUCCESS: Zoya's Brain is Installed! ==="
+            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED & PROTECTED! ==="
+            
