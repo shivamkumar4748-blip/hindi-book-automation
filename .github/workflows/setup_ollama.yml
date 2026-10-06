@@ -1,59 +1,73 @@
-name: Founder's Override - Safe Key Repair & Install
+name: 00 - FINAL BULLETPROOF FIX
 
 on:
   workflow_dispatch:
 
 jobs:
-  creator-mode:
+  ultimate-fix:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup OCI CLI & Safe Key Repair
+      - name: 1. Brute-Force Repair & Verify API Key
         env:
           RAW_KEY: ${{ secrets.OCI_API_KEY }}
         run: |
-          pip install oci-cli
           mkdir -p ~/.oci
           
-          # 🚨 SAFE PYTHON REPAIR (No Header Tampering) 🚨
+          # 🚨 The Foolproof Python Repair 🚨
           cat << 'EOF' > fix_key.py
-          import os, re
-          raw = os.environ.get('RAW_KEY', '').strip()
+          import os
+          raw_key = os.environ.get('RAW_KEY', '')
           
-          # If key already has valid newlines, just ensure it ends with one
-          if '\n' in raw:
-              final_key = raw + '\n'
-          else:
-              # It was flattened by mobile copy-paste. Rebuild safely.
-              match = re.match(r'(-----BEGIN .*? KEY-----)(.*?)(-----END .*? KEY-----)', raw)
-              if match:
-                  header, b64, footer = match.groups()
-                  b64 = b64.replace(' ', '')
-                  lines = [b64[i:i+64] for i in range(0, len(b64), 64)]
-                  final_key = f"{header}\n" + "\n".join(lines) + f"\n{footer}\n"
-              else:
-                  # Fallback if structure is unknown
-                  final_key = raw + '\n'
+          # Detect the correct header
+          header = "-----BEGIN PRIVATE KEY-----"
+          footer = "-----END PRIVATE KEY-----"
+          if "RSA PRIVATE KEY" in raw_key:
+              header = "-----BEGIN RSA PRIVATE KEY-----"
+              footer = "-----END RSA PRIVATE KEY-----"
+              
+          # Strip EVERYTHING except the raw code
+          clean = raw_key.replace("-----BEGIN PRIVATE KEY-----", "")\
+                         .replace("-----END PRIVATE KEY-----", "")\
+                         .replace("-----BEGIN RSA PRIVATE KEY-----", "")\
+                         .replace("-----END RSA PRIVATE KEY-----", "")
+          clean = ''.join(clean.split())
+          
+          # Rebuild it perfectly (64 characters per line)
+          formatted = f"{header}\n"
+          for i in range(0, len(clean), 64):
+              formatted += clean[i:i+64] + "\n"
+          formatted += f"{footer}\n"
           
           with open("/home/runner/.oci/api_key.pem", "w") as f:
-              f.write(final_key)
+              f.write(formatted)
           EOF
           
           python3 fix_key.py
           chmod 600 /home/runner/.oci/api_key.pem
           
-          # Build the perfect config
-          cat << 'EOF_CONFIG' > ~/.oci/config
+          echo "=== VERIFYING REPAIRED KEY ==="
+          openssl rsa -check -in /home/runner/.oci/api_key.pem -noout
+          if [ $? -ne 0 ]; then
+            echo "❌ CRITICAL ERROR: The API Key is still unreadable."
+            exit 1
+          fi
+          echo "✅ API Key repaired and verified successfully!"
+
+      - name: 2. Setup Perfect OCI Config
+        run: |
+          pip install oci-cli
+          
+          cat << 'EOF' > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
           fingerprint=1b:11:13:06:1e:8c:f5:8d:45:8f:0d:fd:c1:3c:2a
           tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
-          EOF_CONFIG
-          
+          EOF
           chmod 600 ~/.oci/config
 
-      - name: 2. Forge the New Room Key
+      - name: 3. Forge New Room Key
         run: |
           ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
           echo "=========================================================="
@@ -63,13 +77,12 @@ jobs:
           cat zoya_key
           echo "=========================================================="
 
-      - name: 3. Smash & Replace the Old Lock via Main Gate
+      - name: 4. Smash & Replace Old Lock via Main Gate
         run: |
           export PATH=$PATH:/home/runner/bin
           export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
           COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa"
           
-          echo "Finding the server..."
           INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output || echo "")
           
           if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
@@ -78,25 +91,18 @@ jobs:
           fi
           
           PUB_KEY=$(cat zoya_key.pub)
-          echo "Injecting new lock..."
           oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"$PUB_KEY\"}" --force
           
-          echo "✅ New lock installed! Waiting 60 seconds for it to fully sync..."
+          echo "✅ New lock installed! Waiting 60 seconds..."
           sleep 60
 
-      - name: 4. Enter Room & Install Zoya's Brain
+      - name: 5. Enter Room & Install Zoya's Brain
         run: |
           chmod 600 zoya_key
-          echo "Opening the door..."
-          
           ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
-            echo "=== 🚀 INSIDE THE ROOM DIRECTLY ==="
             sudo apt-get update -y
-            
-            echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== Applying 21GB Crash Prevention Limit ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
             cat << 'INNER_EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             [Service]
@@ -107,7 +113,7 @@ jobs:
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            echo "=== Installing Zoya's Brain (Qwen 2.5 32B) ==="
+            echo "=== Pulling Zoya's Brain (Qwen 2.5 32B) ==="
             ollama pull qwen2.5:32b
             echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
           SSH_EOF
