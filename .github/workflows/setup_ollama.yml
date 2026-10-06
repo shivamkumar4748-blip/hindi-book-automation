@@ -1,4 +1,4 @@
-name: Founder's Override - Build Key, Lock & Install Zoya
+name: Founder's Override - Auto-Repair & Install Zoya
 
 on:
   workflow_dispatch:
@@ -7,27 +7,55 @@ jobs:
   creator-mode:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup Main Gate (Using Correct Fingerprint)
+      - name: 1. Auto-Repair API Key & Calculate Fingerprint
         run: |
+          echo "=== Setting up OCI CLI ==="
           pip install oci-cli
           mkdir -p ~/.oci
           
-          # Writing config securely using the EXACT matched fingerprint
-          cat << 'EOF' > ~/.oci/config
+          # 🚨 PYTHON AUTO-REPAIR ENGINE 🚨
+          # This script will fix the mobile copy-paste line-break issue perfectly.
+          cat << 'EOF' > fix_key.py
+          import os
+          raw_key = os.environ.get('RAW_KEY', '')
+          # Clean all headers, spaces, and broken line breaks
+          clean_key = raw_key.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "").replace(" ", "").replace("\n", "").replace("\r", "")
+          
+          # Rebuild it exactly how Oracle wants it (64 chars per line)
+          formatted_key = "-----BEGIN PRIVATE KEY-----\n"
+          for i in range(0, len(clean_key), 64):
+              formatted_key += clean_key[i:i+64] + "\n"
+          formatted_key += "-----END PRIVATE KEY-----\n"
+          
+          with open("/home/runner/.oci/api_key.pem", "w") as f:
+              f.write(formatted_key)
+          EOF
+          
+          export RAW_KEY="${{ secrets.OCI_API_KEY }}"
+          python3 fix_key.py
+          chmod 600 /home/runner/.oci/api_key.pem
+          
+          # 🚨 DYNAMIC FINGERPRINT CALCULATOR 🚨
+          echo "Calculating true fingerprint from the repaired key..."
+          FINGERPRINT=$(openssl rsa -pubout -outform DER -in /home/runner/.oci/api_key.pem 2>/dev/null | openssl md5 -c | grep -oE '[0-9a-f]{2}(:[0-9a-f]{2}){15}')
+          
+          if [ -z "$FINGERPRINT" ]; then
+            echo "❌ ERROR: The API Key could not be repaired."
+            exit 1
+          fi
+          echo "✅ Magic Fingerprint Calculated: $FINGERPRINT"
+          
+          # Build the perfect config
+          cat << EOF_CONFIG > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
-          fingerprint=1b:11:13:06:1e:8c:f5:8d:45:8f:0d:fd:c1:3c:2a
+          fingerprint=$FINGERPRINT
           tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
-          EOF
-          chmod 600 ~/.oci/config
+          EOF_CONFIG
           
-          # Your API Key is perfectly fine. Extracting it cleanly.
-          cat << 'EOF' > ~/.oci/api_key.pem
-          ${{ secrets.OCI_API_KEY }}
-          EOF
-          chmod 600 ~/.oci/api_key.pem
+          chmod 600 ~/.oci/config
 
       - name: 2. Forge the New Key & Lock (Creator's Will)
         run: |
@@ -91,4 +119,3 @@ jobs:
             
             echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
           SSH_EOF
-          
