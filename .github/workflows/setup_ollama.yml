@@ -1,37 +1,31 @@
-name: Setup Zoya Server & Generate Key
+name: Phase 2 - Install Ollama & Qwen 32B
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  deploy-zoya:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate Key, Inject into Server, and Install Ollama
-        run: |
-          echo "=== 1. GENERATING FRESH SSH KEY INSIDE GITHUB ==="
-          mkdir -p ~/.ssh
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/zoya_auto_key -N ""
-          
-          # यह रही वो चाबी जो तू मांग रहा था! यह गिटहब के लॉग्स में दिखेगी।
-          echo "=== COPY THE PRIVATE KEY BELOW THIS LINE ==="
-          cat ~/.ssh/zoya_auto_key
-          echo "=== COPY UNTIL HERE ==="
-          
-          # पब्लिंक की को सर्वर में भेजने की तैयारी
-          PUB_KEY=$(cat ~/.ssh/zoya_auto_key.pub)
-          
-          # ओरेकल एपीआई या ओसीआई सीक्रेट्स का इस्तेमाल करके सर्वर में चाबी इंजेक्ट करना
-          # चूंकि हमारे पास OCI API Key (जो तूने पहले दी थी) है, हम ओरेकल से डायरेक्ट कहेंगे कि भाई ये नई की जोड़ ले!
-          echo "Injecting public key via OCI CLI..."
-          pip install oci-cli
-          
-          mkdir -p ~/.oci
-          echo "[DEFAULT]" > ~/.oci/config
-          echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
-          echo "tenancy=${{ secrets.OCI_TENANCY_OCID }}" >> ~/.oci/config
-          echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
-          echo "region=ap-mumbai-1" >> ~/.oci/config
-          echo "key_content=${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/config_key.pem
-          # (नोट: OCI CLI के जरिए हम सीधे सर्वर के metadata में नई SSH key अपडेट कर सकते हैं)
-          
+      - name: Connect to Server and Install Ollama
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ubuntu
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            echo "=== 1. System Update ==="
+            sudo apt-get update -y
+            
+            echo "=== 2. Installing Ollama ==="
+            curl -fsSL https://ollama.com/install.sh | sh
+            
+            echo "=== 3. Starting Ollama Service ==="
+            sudo systemctl enable ollama
+            sudo systemctl start ollama
+            
+            echo "=== 4. Pulling Qwen-2.5-32B Model ==="
+            echo "Note: This is a ~19GB model. OCI internet is extremely fast, but it will still take a few minutes."
+            ollama pull qwen2.5:32b
+            
+            echo "=== SUCCESS: Zoya's Brain is Installed! ==="
