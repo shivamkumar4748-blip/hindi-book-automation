@@ -1,4 +1,4 @@
-name: Founder's Override - Auto-Repair & Install Zoya
+name: Founder's Override - Safe Key Repair & Install
 
 on:
   workflow_dispatch:
@@ -7,49 +7,45 @@ jobs:
   creator-mode:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Auto-Repair API Key & Calculate Fingerprint
+      - name: 1. Setup OCI CLI & Safe Key Repair
+        env:
+          RAW_KEY: ${{ secrets.OCI_API_KEY }}
         run: |
-          echo "=== Setting up OCI CLI ==="
           pip install oci-cli
           mkdir -p ~/.oci
           
-          # 🚨 PYTHON AUTO-REPAIR ENGINE 🚨
-          # This script will fix the mobile copy-paste line-break issue perfectly.
+          # 🚨 SAFE PYTHON REPAIR (No Header Tampering) 🚨
           cat << 'EOF' > fix_key.py
-          import os
-          raw_key = os.environ.get('RAW_KEY', '')
-          # Clean all headers, spaces, and broken line breaks
-          clean_key = raw_key.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "").replace(" ", "").replace("\n", "").replace("\r", "")
+          import os, re
+          raw = os.environ.get('RAW_KEY', '').strip()
           
-          # Rebuild it exactly how Oracle wants it (64 chars per line)
-          formatted_key = "-----BEGIN PRIVATE KEY-----\n"
-          for i in range(0, len(clean_key), 64):
-              formatted_key += clean_key[i:i+64] + "\n"
-          formatted_key += "-----END PRIVATE KEY-----\n"
+          # If key already has valid newlines, just ensure it ends with one
+          if '\n' in raw:
+              final_key = raw + '\n'
+          else:
+              # It was flattened by mobile copy-paste. Rebuild safely.
+              match = re.match(r'(-----BEGIN .*? KEY-----)(.*?)(-----END .*? KEY-----)', raw)
+              if match:
+                  header, b64, footer = match.groups()
+                  b64 = b64.replace(' ', '')
+                  lines = [b64[i:i+64] for i in range(0, len(b64), 64)]
+                  final_key = f"{header}\n" + "\n".join(lines) + f"\n{footer}\n"
+              else:
+                  # Fallback if structure is unknown
+                  final_key = raw + '\n'
           
           with open("/home/runner/.oci/api_key.pem", "w") as f:
-              f.write(formatted_key)
+              f.write(final_key)
           EOF
           
-          export RAW_KEY="${{ secrets.OCI_API_KEY }}"
           python3 fix_key.py
           chmod 600 /home/runner/.oci/api_key.pem
           
-          # 🚨 DYNAMIC FINGERPRINT CALCULATOR 🚨
-          echo "Calculating true fingerprint from the repaired key..."
-          FINGERPRINT=$(openssl rsa -pubout -outform DER -in /home/runner/.oci/api_key.pem 2>/dev/null | openssl md5 -c | grep -oE '[0-9a-f]{2}(:[0-9a-f]{2}){15}')
-          
-          if [ -z "$FINGERPRINT" ]; then
-            echo "❌ ERROR: The API Key could not be repaired."
-            exit 1
-          fi
-          echo "✅ Magic Fingerprint Calculated: $FINGERPRINT"
-          
           # Build the perfect config
-          cat << EOF_CONFIG > ~/.oci/config
+          cat << 'EOF_CONFIG' > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
-          fingerprint=$FINGERPRINT
+          fingerprint=1b:11:13:06:1e:8c:f5:8d:45:8f:0d:fd:c1:3c:2a
           tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
@@ -57,17 +53,15 @@ jobs:
           
           chmod 600 ~/.oci/config
 
-      - name: 2. Forge the New Key & Lock (Creator's Will)
+      - name: 2. Forge the New Room Key
         run: |
           ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
-          
           echo "=========================================================="
           echo "🚨 FOUNDER'S NEW ROOM KEY (PRIVATE KEY) 🚨"
           echo "COPY EVERYTHING BELOW THIS LINE TO SAVE IT IN YOUR PHONE:"
           echo "=========================================================="
           cat zoya_key
           echo "=========================================================="
-          echo "=== END OF PRIVATE KEY ==="
 
       - name: 3. Smash & Replace the Old Lock via Main Gate
         run: |
@@ -90,10 +84,10 @@ jobs:
           echo "✅ New lock installed! Waiting 60 seconds for it to fully sync..."
           sleep 60
 
-      - name: 4. Enter Room & Install Zoya's Brain (Qwen 32B)
+      - name: 4. Enter Room & Install Zoya's Brain
         run: |
           chmod 600 zoya_key
-          echo "Opening the door with the new key..."
+          echo "Opening the door..."
           
           ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
             echo "=== 🚀 INSIDE THE ROOM DIRECTLY ==="
@@ -114,8 +108,6 @@ jobs:
             sudo systemctl restart ollama
             
             echo "=== Installing Zoya's Brain (Qwen 2.5 32B) ==="
-            echo "This will take a few minutes..."
             ollama pull qwen2.5:32b
-            
             echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
           SSH_EOF
