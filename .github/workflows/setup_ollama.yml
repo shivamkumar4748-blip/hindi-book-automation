@@ -8,11 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH into Server and Install
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ubuntu
           key: ${{ secrets.OCI_KEY }}
+          debug: true
           script: |
             echo "Setting up 32GB Swap Memory to prevent crashes..."
             if [ ! -f /swapfile ]; then
@@ -35,3 +36,4 @@ jobs:
             tmux new-session -d -s pull_model 'ollama run qwen2.5:32b'
             
             echo "Installation triggered successfully."
+            
