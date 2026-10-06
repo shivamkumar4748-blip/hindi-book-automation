@@ -7,33 +7,32 @@ jobs:
   install_system:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH into Server and Install
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.OCI_HOST }}
-          username: ubuntu
-          key: ${{ secrets.OCI_KEY }}
-          debug: true
-          script: |
-            echo "Setting up 32GB Swap Memory to prevent crashes..."
-            if [ ! -f /swapfile ]; then
-              sudo fallocate -l 32G /swapfile
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
-              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-            fi
-            
-            echo "Installing Ollama..."
-            curl -fsSL https://ollama.com/install.sh | sh
-            
-            echo "Starting Ollama Service..."
-            sudo systemctl enable ollama
-            sudo systemctl start ollama
-            
-            echo "Pulling Qwen-2.5-32B model in background..."
-            sudo apt-get install tmux -y
-            tmux new-session -d -s pull_model 'ollama run qwen2.5:32b'
-            
-            echo "Installation triggered successfully."
-            
+      - name: Execute Raw SSH Command
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OCI_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          cat << 'EOF' > setup_zoya.sh
+          echo "Setting up 32GB Swap Memory..."
+          if [ ! -f /swapfile ]; then
+            sudo fallocate -l 32G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+            echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+          fi
+          
+          echo "Installing Ollama..."
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl enable ollama
+          sudo systemctl start ollama
+          
+          echo "Pulling Qwen-2.5-32B model in background..."
+          sudo apt-get install tmux -y
+          tmux new-session -d -s pull_model 'ollama run qwen2.5:32b'
+          echo "Installation started successfully!"
+          EOF
+          
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o PubkeyAcceptedKeyTypes=+ssh-rsa ubuntu@${{ secrets.OCI_HOST }} 'bash -s' < setup_zoya.sh
+          
