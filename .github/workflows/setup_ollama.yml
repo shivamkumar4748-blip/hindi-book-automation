@@ -1,93 +1,38 @@
-name: Phase 2 - Hack Lock & Install Zoya Brain (32B)
+name: Phase 2 - Direct Server Entry & Install Zoya Brain (32B)
 
 on:
   workflow_dispatch:
 
 jobs:
-  inject-and-install:
+  direct-install:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup Oracle OCI CLI (The Main Gate)
-        run: |
-          echo "=== Setting up OCI CLI to break the door from outside ==="
-          pip install oci-cli
-          mkdir -p ~/.oci
-          
-          # Using EOF to perfectly preserve all formatting and line breaks
-          cat << 'EOF' > ~/.oci/config
-          [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
-          region=ap-mumbai-1
-          key_file=/home/runner/.oci/api_key.pem
-          EOF
-          
-          # Safely writing the API Key without breaking its structure
-          cat << 'EOF' > ~/.oci/api_key.pem
-          ${{ secrets.OCI_API_KEY }}
-          EOF
-          chmod 600 ~/.oci/api_key.pem
-
-      - name: 2. Generate Public Key from SSH Secret
-        run: |
-          echo "=== Extracting Public Key (The Lock) ==="
-          cat << 'EOF' > ssh_key.pem
-          ${{ secrets.OCI_SSH_KEY }}
-          EOF
-          chmod 600 ssh_key.pem
-          ssh-keygen -y -f ssh_key.pem > public_key.pub
-          PUB_KEY=$(cat public_key.pub)
-          echo "NEW_PUB_KEY<<EOF" >> $GITHUB_ENV
-          echo "$PUB_KEY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: 3. Find Zoya's Server ID & Inject Lock
-        run: |
-          echo "=== Finding Server and Injecting Lock ==="
-          export PATH=$PATH:/home/runner/bin
-          COMPARTMENT="${{ secrets.OCI_TENANCY_OCID }}"
-          
-          # Safe extraction of Instance ID
-          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output)
-          
-          if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
-            echo "❌ Error: Could not find the server. OCI CLI authentication failed or Compartment is empty."
-            exit 1
-          fi
-          
-          echo "✅ Target Server ID Found: $INSTANCE_OCID"
-          
-          # Force update metadata with new SSH key
-          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_PUB_KEY }}\"}" --force
-          
-          echo "✅ Lock successfully changed! Waiting 60 seconds for Oracle cloud-init to sync..."
-          sleep 60
-
-      - name: 4. SSH Connect, Setup Anti-Crash & Install Qwen 32B
+      - name: Connect Directly and Setup Zoya Brain
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ubuntu
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            echo "=== 🚀 ENTERED THE SERVER SUCCESSFULLY ==="
+            echo "=== 🚀 INSIDE THE SERVER DIRECTLY ==="
             sudo apt-get update -y
             
             echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== Configuring 22GB Memory Limit (Anti-Crash) ==="
+            echo "=== Setting 21GB Cgroup Hard Limit ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
-            echo "[Service]" | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
-            echo "MemoryMax=22G" | sudo tee -a /etc/systemd/system/ollama.service.d/memory-limit.conf
+            cat << 'EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
+            [Service]
+            MemoryMax=21G
+            EOF
             
             sudo systemctl daemon-reload
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            echo "=== Downloading Qwen-2.5-32B Model (~19.5GB) ==="
+            echo "=== Pulling Qwen 2.5 32B Model ==="
             ollama pull qwen2.5:32b
             
-            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED & PROTECTED! ==="
+            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED! ==="
             
