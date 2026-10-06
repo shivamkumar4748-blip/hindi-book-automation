@@ -1,5 +1,5 @@
 {
-    "total_success": 81,
+    "total_success": 83,
     "processed_identifiers": [
         "eparlib.nic.in.760660",
         "eparlib.nic.in.761495",
@@ -81,6 +81,8 @@
         "dharmmopadesarel00calc",
         "dharmapustakakea00unse",
         "annual-report-indian-agricultural-research-institute_1938-06-30",
-        "annual-report-indian-agricultural-research-institute_1950-06-30"
+        "annual-report-indian-agricultural-research-institute_1950-06-30",
+        "eparlib.nic.in.761846",
+        "eparlib.nic.in.762253"
     ]
 }
