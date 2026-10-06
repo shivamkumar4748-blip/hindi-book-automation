@@ -1,19 +1,19 @@
-name: Setup Ollama and Qwen
+name: Setup Zoya Server
 
 on:
   workflow_dispatch:
 
 jobs:
-  install_system:
+  install:
     runs-on: ubuntu-latest
     steps:
-      - name: Execute Raw SSH Command
+      - name: Auto-Detect Door and Install Ollama
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.OCI_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          cat << 'EOF' > setup_zoya.sh
+          cat << 'EOF' > install.sh
           echo "Setting up 32GB Swap Memory..."
           if [ ! -f /swapfile ]; then
             sudo fallocate -l 32G /swapfile
@@ -31,8 +31,17 @@ jobs:
           echo "Pulling Qwen-2.5-32B model in background..."
           sudo apt-get install tmux -y
           tmux new-session -d -s pull_model 'ollama run qwen2.5:32b'
-          echo "Installation started successfully!"
+          echo "Installation Success!"
           EOF
           
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o PubkeyAcceptedKeyTypes=+ssh-rsa ubuntu@${{ secrets.OCI_HOST }} 'bash -s' < setup_zoya.sh
+          echo "Testing door 1: ubuntu..."
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.OCI_HOST }} 'bash -s' < install.sh && exit 0
           
+          echo "Testing door 2: opc..."
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no opc@${{ secrets.OCI_HOST }} 'bash -s' < install.sh && exit 0
+          
+          echo "Testing door 3: root..."
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ secrets.OCI_HOST }} 'bash -s' < install.sh && exit 0
+          
+          echo "Failed. Key is correct, but server is completely rejecting all default usernames."
+          exit 1
