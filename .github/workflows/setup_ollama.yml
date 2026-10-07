@@ -39,7 +39,7 @@ jobs:
             Q6DKFMQ9CbTFdPN8Sw3aygLd
             -----END PRIVATE KEY-----
         run: |
-          pip install oci-cli
+          pip install oci
           mkdir -p ~/.oci
           echo "$RAW_KEY" > ~/.oci/api_key.pem
           chmod 600 ~/.oci/api_key.pem
@@ -67,30 +67,40 @@ jobs:
           echo "$PUB_KEY" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: 3. Smash Old Lock & Inject New One
+      - name: 3. Smash Old Lock & Inject New One via Python
+        env:
+          NEW_LOCK: ${{ env.NEW_LOCK }}
         run: |
-          export PATH=$PATH:/home/runner/bin
-          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
-          COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa"
+          python3 - << 'PY_EOF'
+          import oci
+          import os
+
+          config = oci.config.from_file()
+          compute_client = oci.core.ComputeClient(config)
+          compartment_id = "ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa"
+
+          instances = compute_client.list_instances(compartment_id=compartment_id).data
+          if not instances:
+              raise Exception("No instances found.")
+          instance_id = instances[0].id
+          print(f"Found instance: {instance_id}")
+
+          instance = compute_client.get_instance(instance_id).data
+          metadata = dict(instance.metadata) if instance.metadata else {}
           
-          echo "Finding the server..."
-          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output)
-          
-          if [ -z "$INSTANCE_OCID" ]; then
-            echo "❌ Failed to find the server."
-            exit 1
-          fi
-          
-          echo "Server found: $INSTANCE_OCID"
-          echo "Installing new lock..."
-          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_LOCK }}\"}" --force
-          echo "✅ New lock installed! Waiting 60 seconds for sync..."
-          sleep 60
+          new_lock = os.environ["NEW_LOCK"]
+          metadata["ssh_authorized_keys"] = new_lock
+
+          update_details = oci.core.models.UpdateInstanceDetails(metadata=metadata)
+          compute_client.update_instance(instance_id, update_details)
+          print("Successfully updated SSH authorized keys via Python SDK!")
+          PY_EOF
 
       - name: 4. Enter Room & Install Zoya
         run: |
+          sleep 30
           chmod 600 zoya_key
-          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
+          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@80.225.246.245 << 'SSH_EOF'
             echo "=== Inside Server ==="
             sudo apt-get update -y
             curl -fsSL https://ollama.com/install.sh | sh
@@ -109,4 +119,3 @@ jobs:
             ollama pull qwen2.5:32b
             echo "✅ ZOYA IS ONLINE."
           SSH_EOF
-          
