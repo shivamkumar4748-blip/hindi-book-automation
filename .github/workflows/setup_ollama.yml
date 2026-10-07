@@ -1,4 +1,4 @@
-name: 00 - FINAL ZERO SECRET ARCHITECTURE
+name: 00 - FINAL DIRECT DEPLOYMENT
 
 on:
   workflow_dispatch:
@@ -7,12 +7,43 @@ jobs:
   deploy-zoya:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup Oracle Main Gate (Hardcoded)
+      - name: 1. Setup OCI and Configure Key
+        env:
+          RAW_KEY: |
+            -----BEGIN PRIVATE KEY-----
+            MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBeg5Yd2Zh9j8K
+            D2W/y0vM9lKijNvV9E+lXhILdHSfPUETWzUbBja8w9Z9sPRVgCaCb5Miy6kbCu/I
+            EAkOH4YXv10VST6jXnOPKFuWR7LF6AcqfXrzQrIA7pP2L5wR1AglMM9uBzVzEm5w
+            yu3O8hawTWACcPYtZ13z0CTBKYw8W4qp/CB3b02DqFynGW1RVnbIS/LMv4xy+5c/
+            YRI/zFjnNZdzmsFQoLBMbZKizWWF1yG+nQsYSe3nDfcslZ+HmcYftr+RYXRcwg6e
+            /+OVBdAvOmYOZx/iTeMjttNTOzNO9E0rzwMsGzKzB+5SflHT2rMfN7/suc33X83g
+            9zz6zlYPAgMBAAECggEASnl8Sitz2qOaMnoo1YIg5H2w42dLO/l2Kxah5YznU2CV
+            yyihsYxbx5+u0eUquDrDGBRw08UHjCRSlnUttyUFTeDYqNfv55z06JdFYfypYSrm
+            j0GL8VWsBVXQ2MQM1IQEuqQmRJk7xtbCcmJ61d00RJsUKPxolqOic7acX0pp89Ux
+            nEWG9AV8TCP4Evi8cSRxQtmYYJXsqFI/O7kIz1lBhQUrnRhv0Zl8is3PcyR/bZlb
+            MoopUnM6sNhJyz72poTObRH7Yk0w1OvLRDX+8WRkr+1bdeSOI9ZcunFqqsLbwE8e
+            vKgmdrolTS3zauiDG4iga+TI9MAB1uKMEfLH/5jBeQKBgQDgioo1SLrqNiPvVrPo
+            1DO1jiieLl76Y5QO8yz5L7EOwhDkGqJvy6c9qAU7pu6IFnZ4kziL7VpLeFRnY4pP
+            MMmb4qzbtlEVrmwZ5CY/IHjl9wvfsi8+Fffxh5xbcbjwC4Zmbvgp4pZD4Kb2+RYG
+            1DO7kVOJ2m4Uwdq7qQghQQ5GkwKBgQDclVn/dmJ4nfoZcU7X0GkGTPQe0rJPH1Zo
+            SA96oXQlRm51e8bRbDNMoBnvUvCRNBDHaUKqSjdg4GlYtR3DgJO8LQ/P0isoqa6D
+            sV6RT/6UjElnD8tr4EgD41cCYIY0fx7MXZpOMRZSKoANnXWq7QYAjNV/k74DR4Sn
+            0sWDRT7EFQKBgQC0IK9qu2Omy7PcJnPBDapFtTsEWjK7LvLxY0bqx8WED065jlxM
+            ztTk80rvZaTo6wwzAfdU2R2ceXVMU1/60yqIsTj2MLWvbPMvegTsk0IpSRvvYePg
+            LINw8NcPzJUNjFFPDyppf2oIHcoTShLPe5/ckmKvrditMi4kaR8qfiPTnQKBgH7Q
+            Ch54w+HOCJOJ9abS9R4fLZVu0f306SsoimWY3nnzhNtb3pBVYSSjQmW5S/5ebWsH
+            E8Fsy2uReF78OPFFQSnEyjtS+2b0LhUd6l0mHRjvkd+DUBJjrWM21rXSIjWaA23A
+            Pk7Hn6p7LoUlShmLDJFSZgdjO7EM87G71btDGvOFAoGBAOBHpydHKIFey6DC+Hck
+            uhQz1xboQdiVfTnGJ1Q8HKQg6A+jYwkOrLmju9gvl7fXG6+g9fXbwRtPFy7ZfxfZ
+            EDGVfH9heKLjh5ueYT8WM8H9BKu1E0VrDAi2lE1xWqV/u14haCNHJdRAzE8lqO7a
+            Q6DKFMQ9CbTFdPN8Sw3aygLd
+            -----END PRIVATE KEY-----
         run: |
           pip install oci-cli
           mkdir -p ~/.oci
+          echo "$RAW_KEY" > ~/.oci/api_key.pem
+          chmod 600 ~/.oci/api_key.pem
           
-          # 100% Hardcoded Config
           cat << 'EOF' > ~/.oci/config
           [DEFAULT]
           user=ocid1.user.oc1..aaaaaaaavhodc4li4cbn465epajsmlhrqlgnl5bhzek2p3ruotuuqfqsk2qq
@@ -22,45 +53,6 @@ jobs:
           key_file=/home/runner/.oci/api_key.pem
           EOF
           chmod 600 ~/.oci/config
-          
-          # 100% Hardcoded Key from your Screenshots
-          cat << 'EOF' > /home/runner/.oci/api_key.pem
-          -----BEGIN PRIVATE KEY-----
-          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBeg5Yd2Zh9j8K
-          D2W/y0vM9lKijNvV9E+IXhlLdHSfPUETWzUbBja8w9Z9sPRVgCaCb5Miy6kbCu/I
-          EAkOH4YXv10VST6jXnOPKFuWR7LF6AcqfXrzQrlA7pP2L5wR1AglMM9uBzVzEm5w
-          yu3O8hawTWACcPYtZ13z0CTBKYw8W4qp/CB3b02DqFynGW1RVnblS/LMv4xy+5c/
-          YRl/zFjnNZdzmsFQoLBMbZKizWWF1yG+nQsYSe3nDfcslZ+HmcYftr+RYXRcwg6e
-          /+OVBdAvOmYOZx/iTeMjttNTOzNO9E0rzwMsGzKzB+5SflHT2rMfN7/suc33X83g
-          9zz6zlYPAgMBAAECggEASnl8Sitz2qOaMnoo1YIg5H2w42dLO/I2Kxah5YznU2CV
-          yyihsYxbx5+u0eUquDrDGBRw08UHjCRSInUttyUFTeDYqNfv55z06JdFYfypYSrm
-          j0GL8VWsBVXQ2MQM1IQEuqQmRJk7xtbCcmJ61d00RJsUKPxolqOic7acX0pp89Ux
-          nEWG9AV8TCP4Evi8cSRxQtmYYJXsqFl/O7klz1IBhQUrnRhv0ZI8is3PcyR/bZlb
-          MoopUnM6sNhJyz72poTObRH7Yk0w1OvLRDX+8WRkr+1bdeSOl9ZcunFqqsLbwE8e
-          vKgmdrolTS3zauiDG4iga+Tl9MAB1uKMEfLH/5jBeQKBgQDGioo1SLrqNiPvVrPo
-          1DO1jiieLl76Y5QO8yz5L7EOwhDkGqJvy6c9qAU7pu6lFnZ4kziL7VpLeFRnY4pP
-          MMmb4qzbtlEVrmwZ5CY/IHjI9wvfsi8+Fffxh5xbcbjwC4Zmbvgp4pZD4Kb2+RYG
-          1DO7kVOJ2m4Uwdq7qQghQQ5GkwKBgQDclVn/dmJ4nfoZcU7X0GkGTPQe0rJPH1Zo
-          SA96oXQlRm51e8bRbDNMoBnvUvCRNBDHaUKqSjdg4GlYtR3DgJO8LQ/P0isoqa6D
-          sV6RT/6UjElnD8tr4EgD41cCYIY0fx7MXZpOMRZSKoANnXWq7QYAjNV/k74DR4Sn
-          0sWDRT7EFQKBgQC0lK9qu2Omy7PcJnPBDapFtTsEWjK7LvLxY0bqx8WED065jlxM
-          ztTk80rvZaTo6wwzAfdU2R2ceXVMU1/6OyqIsTj2MLWvbPMvegTsk0lpSRvvYePg
-          LlNw8NcPzJUNjFFPDyppf2oIHcoTShLPe5/ckmKvrditMi4kaR8qfiPTnQKBgH7Q
-          Ch54w+HOCJOJ9abS9R4fLZVu0f306SsoimWY3nnzhNtb3pBVYSSjQmW5S/5ebWsH
-          E8Fsy2uReF78OPFFQSnEyjts+2b0LhUd6I0mHRjvkd+DUBJjrWM21rXSljWaA23A
-          Pk7Hn6p7LoUlShmLDJFSZgdjO7EM87G71btDGvOFAoGBAOBHpydHKIFey6DC+Hck
-          uhQz1xboQdiVfTnGJ1Q8HKQg6A+jYwkOrLmju9gvI7fXG6+g9fXbwRtPFy7ZfxfZ
-          EDGVfH9heKLjh5ueYT8WM8H9BKu1E0VrDAi2IE1xWqV/u14haCNHJdRAzE8lq07a
-          Q6DKFMQ9CbTfDPN8Sw3aygLd
-          -----END PRIVATE KEY-----
-          EOF
-          
-          # Fallback check in case the screenshot text missed a single character
-          if ! openssl rsa -check -in /home/runner/.oci/api_key.pem -noout 2>/dev/null; then
-              echo "Reverting to Git Secret Key just in case..."
-              echo "${{ secrets.OCI_API_KEY }}" > /home/runner/.oci/api_key.pem
-          fi
-          chmod 600 /home/runner/.oci/api_key.pem
 
       - name: 2. Forge New Room Key & Lock
         run: |
@@ -117,3 +109,4 @@ jobs:
             ollama pull qwen2.5:32b
             echo "✅ ZOYA IS ONLINE."
           SSH_EOF
+          
