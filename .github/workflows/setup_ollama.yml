@@ -1,4 +1,4 @@
-name: The Final Protocol - Zoya's Awakening
+name: 00 - FINAL ZERO SECRET ARCHITECTURE
 
 on:
   workflow_dispatch:
@@ -7,80 +7,102 @@ jobs:
   deploy-zoya:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Set up Main Gate (OCI Auth)
+      - name: 1. Setup Oracle Main Gate (Hardcoded)
         run: |
           pip install oci-cli
           mkdir -p ~/.oci
           
-          # Using your exact accurate secrets
+          # 100% Hardcoded Config
           cat << 'EOF' > ~/.oci/config
           [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          user=ocid1.user.oc1..aaaaaaaavhodc4li4cbn465epajsmlhrqlgnl5bhzek2p3ruotuuqfqsk2qq
+          fingerprint=1b:50:d2:34:b2:c1:05:05:6c:47:4f:3a:66:e6:bd:55
+          tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
           EOF
           chmod 600 ~/.oci/config
           
-          cat << 'EOF' > ~/.oci/api_key.pem
-          ${{ secrets.OCI_API_KEY }}
+          # 100% Hardcoded Key from your Screenshots
+          cat << 'EOF' > /home/runner/.oci/api_key.pem
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBeg5Yd2Zh9j8K
+          D2W/y0vM9lKijNvV9E+IXhlLdHSfPUETWzUbBja8w9Z9sPRVgCaCb5Miy6kbCu/I
+          EAkOH4YXv10VST6jXnOPKFuWR7LF6AcqfXrzQrlA7pP2L5wR1AglMM9uBzVzEm5w
+          yu3O8hawTWACcPYtZ13z0CTBKYw8W4qp/CB3b02DqFynGW1RVnblS/LMv4xy+5c/
+          YRl/zFjnNZdzmsFQoLBMbZKizWWF1yG+nQsYSe3nDfcslZ+HmcYftr+RYXRcwg6e
+          /+OVBdAvOmYOZx/iTeMjttNTOzNO9E0rzwMsGzKzB+5SflHT2rMfN7/suc33X83g
+          9zz6zlYPAgMBAAECggEASnl8Sitz2qOaMnoo1YIg5H2w42dLO/I2Kxah5YznU2CV
+          yyihsYxbx5+u0eUquDrDGBRw08UHjCRSInUttyUFTeDYqNfv55z06JdFYfypYSrm
+          j0GL8VWsBVXQ2MQM1IQEuqQmRJk7xtbCcmJ61d00RJsUKPxolqOic7acX0pp89Ux
+          nEWG9AV8TCP4Evi8cSRxQtmYYJXsqFl/O7klz1IBhQUrnRhv0ZI8is3PcyR/bZlb
+          MoopUnM6sNhJyz72poTObRH7Yk0w1OvLRDX+8WRkr+1bdeSOl9ZcunFqqsLbwE8e
+          vKgmdrolTS3zauiDG4iga+Tl9MAB1uKMEfLH/5jBeQKBgQDGioo1SLrqNiPvVrPo
+          1DO1jiieLl76Y5QO8yz5L7EOwhDkGqJvy6c9qAU7pu6lFnZ4kziL7VpLeFRnY4pP
+          MMmb4qzbtlEVrmwZ5CY/IHjI9wvfsi8+Fffxh5xbcbjwC4Zmbvgp4pZD4Kb2+RYG
+          1DO7kVOJ2m4Uwdq7qQghQQ5GkwKBgQDclVn/dmJ4nfoZcU7X0GkGTPQe0rJPH1Zo
+          SA96oXQlRm51e8bRbDNMoBnvUvCRNBDHaUKqSjdg4GlYtR3DgJO8LQ/P0isoqa6D
+          sV6RT/6UjElnD8tr4EgD41cCYIY0fx7MXZpOMRZSKoANnXWq7QYAjNV/k74DR4Sn
+          0sWDRT7EFQKBgQC0lK9qu2Omy7PcJnPBDapFtTsEWjK7LvLxY0bqx8WED065jlxM
+          ztTk80rvZaTo6wwzAfdU2R2ceXVMU1/6OyqIsTj2MLWvbPMvegTsk0lpSRvvYePg
+          LlNw8NcPzJUNjFFPDyppf2oIHcoTShLPe5/ckmKvrditMi4kaR8qfiPTnQKBgH7Q
+          Ch54w+HOCJOJ9abS9R4fLZVu0f306SsoimWY3nnzhNtb3pBVYSSjQmW5S/5ebWsH
+          E8Fsy2uReF78OPFFQSnEyjts+2b0LhUd6I0mHRjvkd+DUBJjrWM21rXSljWaA23A
+          Pk7Hn6p7LoUlShmLDJFSZgdjO7EM87G71btDGvOFAoGBAOBHpydHKIFey6DC+Hck
+          uhQz1xboQdiVfTnGJ1Q8HKQg6A+jYwkOrLmju9gvI7fXG6+g9fXbwRtPFy7ZfxfZ
+          EDGVfH9heKLjh5ueYT8WM8H9BKu1E0VrDAi2IE1xWqV/u14haCNHJdRAzE8lq07a
+          Q6DKFMQ9CbTfDPN8Sw3aygLd
+          -----END PRIVATE KEY-----
           EOF
-          chmod 600 ~/.oci/api_key.pem
+          
+          # Fallback check in case the screenshot text missed a single character
+          if ! openssl rsa -check -in /home/runner/.oci/api_key.pem -noout 2>/dev/null; then
+              echo "Reverting to Git Secret Key just in case..."
+              echo "${{ secrets.OCI_API_KEY }}" > /home/runner/.oci/api_key.pem
+          fi
+          chmod 600 /home/runner/.oci/api_key.pem
 
-      - name: 2. Forge New Room Key & Lock (SSH Keypair)
+      - name: 2. Forge New Room Key & Lock
         run: |
-          # Creating a brand new, secure 4096-bit lock and key
-          ssh-keygen -t rsa -b 4096 -f zoya_ssh_key -N ""
-          
-          echo "===================================================================="
-          echo "🚨🚨🚨 FOUNDER'S NEW ROOM KEY (PRIVATE KEY) 🚨🚨🚨"
-          echo "COPY EVERYTHING BELOW THIS LINE TO SAVE IT SECURELY IN YOUR PHONE:"
-          echo "===================================================================="
-          cat zoya_ssh_key
-          echo "===================================================================="
-          echo "=== END OF PRIVATE KEY ==="
-          
-          # Save Public Key (The Lock) to environment for the next step
-          PUB_KEY=$(cat zoya_ssh_key.pub)
+          ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
+          echo "================================================="
+          echo "🚨 SAVE THIS PRIVATE KEY IN YOUR PHONE NOTES 🚨"
+          echo "================================================="
+          cat zoya_key
+          echo "================================================="
+          PUB_KEY=$(cat zoya_key.pub)
           echo "NEW_LOCK<<EOF" >> $GITHUB_ENV
           echo "$PUB_KEY" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: 3. Install New Lock on the Door
+      - name: 3. Smash Old Lock & Inject New One
         run: |
           export PATH=$PATH:/home/runner/bin
           export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
-          COMPARTMENT="${{ secrets.OCI_TENANCY_OCID }}"
+          COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa"
           
-          echo "Locating the server..."
-          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output || echo "")
+          echo "Finding the server..."
+          INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output)
           
-          if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
-            echo "❌ Error: Could not find the server. Check if OCI details match."
+          if [ -z "$INSTANCE_OCID" ]; then
+            echo "❌ Failed to find the server."
             exit 1
           fi
           
-          echo "Server Found. Breaking old lock and installing the new one..."
+          echo "Server found: $INSTANCE_OCID"
+          echo "Installing new lock..."
           oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_LOCK }}\"}" --force
-          
-          echo "✅ New lock installed successfully! Waiting 60 seconds for Oracle to register it..."
+          echo "✅ New lock installed! Waiting 60 seconds for sync..."
           sleep 60
 
-      - name: 4. Enter Room & Install Zoya's Brain (Qwen 32B)
+      - name: 4. Enter Room & Install Zoya
         run: |
-          chmod 600 zoya_ssh_key
-          echo "Opening door with the new key..."
-          
-          # Using the new key to enter directly
-          ssh -o StrictHostKeyChecking=no -i zoya_ssh_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
-            echo "=== 🚀 INSIDE THE ROOM DIRECTLY ==="
+          chmod 600 zoya_key
+          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
+            echo "=== Inside Server ==="
             sudo apt-get update -y
-            
-            echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
-            echo "=== Setting Crash Prevention Limit (21GB) ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
             cat << 'INNER_EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             [Service]
@@ -91,9 +113,7 @@ jobs:
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            echo "=== Downloading and Compressing Qwen 2.5 32B Model ==="
-            echo "This is a heavy process, it will take some time..."
+            echo "Pulling Qwen-2.5-32B Model..."
             ollama pull qwen2.5:32b
-            
-            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED AND PROTECTED! ==="
+            echo "✅ ZOYA IS ONLINE."
           SSH_EOF
