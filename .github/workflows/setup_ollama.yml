@@ -1,108 +1,86 @@
-name: 00 - FINAL BULLETPROOF FIX
+name: The Final Protocol - Zoya's Awakening
 
 on:
   workflow_dispatch:
 
 jobs:
-  ultimate-fix:
+  deploy-zoya:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Brute-Force Repair & Verify API Key
-        env:
-          RAW_KEY: ${{ secrets.OCI_API_KEY }}
-        run: |
-          mkdir -p ~/.oci
-          
-          # 🚨 The Foolproof Python Repair 🚨
-          cat << 'EOF' > fix_key.py
-          import os
-          raw_key = os.environ.get('RAW_KEY', '')
-          
-          # Detect the correct header
-          header = "-----BEGIN PRIVATE KEY-----"
-          footer = "-----END PRIVATE KEY-----"
-          if "RSA PRIVATE KEY" in raw_key:
-              header = "-----BEGIN RSA PRIVATE KEY-----"
-              footer = "-----END RSA PRIVATE KEY-----"
-              
-          # Strip EVERYTHING except the raw code
-          clean = raw_key.replace("-----BEGIN PRIVATE KEY-----", "")\
-                         .replace("-----END PRIVATE KEY-----", "")\
-                         .replace("-----BEGIN RSA PRIVATE KEY-----", "")\
-                         .replace("-----END RSA PRIVATE KEY-----", "")
-          clean = ''.join(clean.split())
-          
-          # Rebuild it perfectly (64 characters per line)
-          formatted = f"{header}\n"
-          for i in range(0, len(clean), 64):
-              formatted += clean[i:i+64] + "\n"
-          formatted += f"{footer}\n"
-          
-          with open("/home/runner/.oci/api_key.pem", "w") as f:
-              f.write(formatted)
-          EOF
-          
-          python3 fix_key.py
-          chmod 600 /home/runner/.oci/api_key.pem
-          
-          echo "=== VERIFYING REPAIRED KEY ==="
-          openssl rsa -check -in /home/runner/.oci/api_key.pem -noout
-          if [ $? -ne 0 ]; then
-            echo "❌ CRITICAL ERROR: The API Key is still unreadable."
-            exit 1
-          fi
-          echo "✅ API Key repaired and verified successfully!"
-
-      - name: 2. Setup Perfect OCI Config
+      - name: 1. Set up Main Gate (OCI Auth)
         run: |
           pip install oci-cli
+          mkdir -p ~/.oci
           
+          # Using your exact accurate secrets
           cat << 'EOF' > ~/.oci/config
           [DEFAULT]
-          user=ocid1.user.oc1..aaaaaaaavhodc4ll4cbn465epajsnlhrqlgnl5bnzek2p3ruotuuqfqsk2qq
-          fingerprint=1b:11:13:06:1e:8c:f5:8d:45:8f:0d:fd:c1:3c:2a
-          tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
           region=ap-mumbai-1
           key_file=/home/runner/.oci/api_key.pem
           EOF
           chmod 600 ~/.oci/config
+          
+          cat << 'EOF' > ~/.oci/api_key.pem
+          ${{ secrets.OCI_API_KEY }}
+          EOF
+          chmod 600 ~/.oci/api_key.pem
 
-      - name: 3. Forge New Room Key
+      - name: 2. Forge New Room Key & Lock (SSH Keypair)
         run: |
-          ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
-          echo "=========================================================="
-          echo "🚨 FOUNDER'S NEW ROOM KEY (PRIVATE KEY) 🚨"
-          echo "COPY EVERYTHING BELOW THIS LINE TO SAVE IT IN YOUR PHONE:"
-          echo "=========================================================="
-          cat zoya_key
-          echo "=========================================================="
+          # Creating a brand new, secure 4096-bit lock and key
+          ssh-keygen -t rsa -b 4096 -f zoya_ssh_key -N ""
+          
+          echo "===================================================================="
+          echo "🚨🚨🚨 FOUNDER'S NEW ROOM KEY (PRIVATE KEY) 🚨🚨🚨"
+          echo "COPY EVERYTHING BELOW THIS LINE TO SAVE IT SECURELY IN YOUR PHONE:"
+          echo "===================================================================="
+          cat zoya_ssh_key
+          echo "===================================================================="
+          echo "=== END OF PRIVATE KEY ==="
+          
+          # Save Public Key (The Lock) to environment for the next step
+          PUB_KEY=$(cat zoya_ssh_key.pub)
+          echo "NEW_LOCK<<EOF" >> $GITHUB_ENV
+          echo "$PUB_KEY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-      - name: 4. Smash & Replace Old Lock via Main Gate
+      - name: 3. Install New Lock on the Door
         run: |
           export PATH=$PATH:/home/runner/bin
           export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
-          COMPARTMENT="ocid1.tenancy.oc1..aaaaaaaajpyefe3wwguem5ljpebb66erskktiltomv4optapcgilwtn6opa"
+          COMPARTMENT="${{ secrets.OCI_TENANCY_OCID }}"
           
+          echo "Locating the server..."
           INSTANCE_OCID=$(oci compute instance list -c $COMPARTMENT --all --query "data[0].id" --raw-output || echo "")
           
           if [ -z "$INSTANCE_OCID" ] || [ "$INSTANCE_OCID" == "null" ]; then
-            echo "❌ Failed to find the server!"
+            echo "❌ Error: Could not find the server. Check if OCI details match."
             exit 1
           fi
           
-          PUB_KEY=$(cat zoya_key.pub)
-          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"$PUB_KEY\"}" --force
+          echo "Server Found. Breaking old lock and installing the new one..."
+          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_LOCK }}\"}" --force
           
-          echo "✅ New lock installed! Waiting 60 seconds..."
+          echo "✅ New lock installed successfully! Waiting 60 seconds for Oracle to register it..."
           sleep 60
 
-      - name: 5. Enter Room & Install Zoya's Brain
+      - name: 4. Enter Room & Install Zoya's Brain (Qwen 32B)
         run: |
-          chmod 600 zoya_key
-          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
+          chmod 600 zoya_ssh_key
+          echo "Opening door with the new key..."
+          
+          # Using the new key to enter directly
+          ssh -o StrictHostKeyChecking=no -i zoya_ssh_key ubuntu@${{ secrets.OCI_HOST }} << 'SSH_EOF'
+            echo "=== 🚀 INSIDE THE ROOM DIRECTLY ==="
             sudo apt-get update -y
+            
+            echo "=== Installing Ollama ==="
             curl -fsSL https://ollama.com/install.sh | sh
             
+            echo "=== Setting Crash Prevention Limit (21GB) ==="
             sudo mkdir -p /etc/systemd/system/ollama.service.d
             cat << 'INNER_EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
             [Service]
@@ -113,7 +91,9 @@ jobs:
             sudo systemctl enable ollama
             sudo systemctl restart ollama
             
-            echo "=== Pulling Zoya's Brain (Qwen 2.5 32B) ==="
+            echo "=== Downloading and Compressing Qwen 2.5 32B Model ==="
+            echo "This is a heavy process, it will take some time..."
             ollama pull qwen2.5:32b
-            echo "=== 🏆 ZOYA IS ALIVE AND SECURED! ==="
+            
+            echo "=== 🏆 SUCCESS: ZOYA'S BRAIN IS FULLY INSTALLED AND PROTECTED! ==="
           SSH_EOF
