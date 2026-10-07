@@ -39,7 +39,7 @@ jobs:
             Q6DKFMQ9CbTFdPN8Sw3aygLd
             -----END PRIVATE KEY-----
         run: |
-          pip install oci
+          pip install oci-cli
           mkdir -p ~/.oci
           echo "$RAW_KEY" > ~/.oci/api_key.pem
           chmod 600 ~/.oci/api_key.pem
@@ -67,38 +67,19 @@ jobs:
           echo "$PUB_KEY" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: 3. Smash Old Lock & Inject New One via Python
-        env:
-          NEW_LOCK: ${{ env.NEW_LOCK }}
+      - name: 3. Inject New Lock via CLI
         run: |
-          python3 - << 'PY_EOF'
-          import oci
-          import os
-
-          config = oci.config.from_file()
-          compute_client = oci.core.ComputeClient(config)
-          compartment_id = "ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa"
-
-          instances = compute_client.list_instances(compartment_id=compartment_id).data
-          if not instances:
-              raise Exception("No instances found.")
-          instance_id = instances[0].id
-          print(f"Found instance: {instance_id}")
-
-          instance = compute_client.get_instance(instance_id).data
-          metadata = dict(instance.metadata) if instance.metadata else {}
+          export PATH=$PATH:/home/runner/bin
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
+          INSTANCE_OCID="ocid1.instance.oc1.ap-mumbai-1.anrg6ljrijjqvbic2cd2egj5ln4d53ix3zdumslbe7am27ohxbegaytlnwca"
           
-          new_lock = os.environ["NEW_LOCK"]
-          metadata["ssh_authorized_keys"] = new_lock
-
-          update_details = oci.core.models.UpdateInstanceDetails(metadata=metadata)
-          compute_client.update_instance(instance_id, update_details)
-          print("Successfully updated SSH authorized keys via Python SDK!")
-          PY_EOF
+          echo "Updating SSH keys on instance..."
+          oci compute instance update --instance-id $INSTANCE_OCID --metadata "{\"ssh_authorized_keys\": \"${{ env.NEW_LOCK }}\"}" --force
+          echo "✅ New lock installed! Waiting 60 seconds for sync..."
+          sleep 60
 
       - name: 4. Enter Room & Install Zoya
         run: |
-          sleep 30
           chmod 600 zoya_key
           ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@80.225.246.245 << 'SSH_EOF'
             echo "=== Inside Server ==="
