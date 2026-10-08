@@ -1,121 +1,33 @@
-name: 00 - FINAL DIRECT DEPLOYMENT
-
+name: Oracle Auto Provision Zoya (Aggressive)
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 */5 * * *' # हर 5 घंटे में नया लूप शुरू करेगा (GitHub लिमिट से बचने के लिए)
+  workflow_dispatch: # मैनुअल स्टार्ट बटन
 
 jobs:
-  deploy-zoya:
+  create-server:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Setup OCI and Configure Key
-        env:
-          RAW_KEY: |
-            -----BEGIN PRIVATE KEY-----
-            MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBeg5Yd2Zh9j8K
-            D2W/y0vM9lKijNvV9E+lXhILdHSfPUETWzUbBja8w9Z9sPRVgCaCb5Miy6kbCu/I
-            EAkOH4YXv10VST6jXnOPKFuWR7LF6AcqfXrzQrIA7pP2L5wR1AglMM9uBzVzEm5w
-            yu3O8hawTWACcPYtZ13z0CTBKYw8W4qp/CB3b02DqFynGW1RVnbIS/LMv4xy+5c/
-            YRI/zFjnNZdzmsFQoLBMbZKizWWF1yG+nQsYSe3nDfcslZ+HmcYftr+RYXRcwg6e
-            /+OVBdAvOmYOZx/iTeMjttNTOzNO9E0rzwMsGzKzB+5SflHT2rMfN7/suc33X83g
-            9zz6zlYPAgMBAAECggEASnl8Sitz2qOaMnoo1YIg5H2w42dLO/l2Kxah5YznU2CV
-            yyihsYxbx5+u0eUquDrDGBRw08UHjCRSlnUttyUFTeDYqNfv55z06JdFYfypYSrm
-            j0GL8VWsBVXQ2MQM1IQEuqQmRJk7xtbCcmJ61d00RJsUKPxolqOic7acX0pp89Ux
-            nEWG9AV8TCP4Evi8cSRxQtmYYJXsqFI/O7kIz1lBhQUrnRhv0Zl8is3PcyR/bZlb
-            MoopUnM6sNhJyz72poTObRH7Yk0w1OvLRDX+8WRkr+1bdeSOI9ZcunFqqsLbwE8e
-            vKgmdrolTS3zauiDG4iga+TI9MAB1uKMEfLH/5jBeQKBgQDgioo1SLrqNiPvVrPo
-            1DO1jiieLl76Y5QO8yz5L7EOwhDkGqJvy6c9qAU7pu6IFnZ4kziL7VpLeFRnY4pP
-            MMmb4qzbtlEVrmwZ5CY/IHjl9wvfsi8+Fffxh5xbcbjwC4Zmbvgp4pZD4Kb2+RYG
-            1DO7kVOJ2m4Uwdq7qQghQQ5GkwKBgQDclVn/dmJ4nfoZcU7X0GkGTPQe0rJPH1Zo
-            SA96oXQlRm51e8bRbDNMoBnvUvCRNBDHaUKqSjdg4GlYtR3DgJO8LQ/P0isoqa6D
-            sV6RT/6UjElnD8tr4EgD41cCYIY0fx7MXZpOMRZSKoANnXWq7QYAjNV/k74DR4Sn
-            0sWDRT7EFQKBgQC0IK9qu2Omy7PcJnPBDapFtTsEWjK7LvLxY0bqx8WED065jlxM
-            ztTk80rvZaTo6wwzAfdU2R2ceXVMU1/60yqIsTj2MLWvbPMvegTsk0IpSRvvYePg
-            LINw8NcPzJUNjFFPDyppf2oIHcoTShLPe5/ckmKvrditMi4kaR8qfiPTnQKBgH7Q
-            Ch54w+HOCJOJ9abS9R4fLZVu0f306SsoimWY3nnzhNtb3pBVYSSjQmW5S/5ebWsH
-            E8Fsy2uReF78OPFFQSnEyjtS+2b0LhUd6l0mHRjvkd+DUBJjrWM21rXSIjWaA23A
-            Pk7Hn6p7LoUlShmLDJFSZgdjO7EM87G71btDGvOFAoGBAOBHpydHKIFey6DC+Hck
-            uhQz1xboQdiVfTnGJ1Q8HKQg6A+jYwkOrLmju9gvl7fXG6+g9fXbwRtPFy7ZfxfZ
-            EDGVfH9heKLjh5ueYT8WM8H9BKu1E0VrDAi2lE1xWqV/u14haCNHJdRAzE8lqO7a
-            Q6DKFMQ9CbTFdPN8Sw3aygLd
-            -----END PRIVATE KEY-----
+      - name: Setup OCI CLI
+        uses: oracle-actions/setup-oci-cli@v1.1.1
+        with:
+          tenancy: ${{ secrets.OCI_TENANCY }}
+          user: ${{ secrets.OCI_USER }}
+          fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          private_key: ${{ secrets.OCI_API_KEY }}
+          region: ${{ secrets.OCI_REGION }}
+
+      - name: Hit Oracle API Every 30 Seconds
         run: |
-          pip install oci
-          mkdir -p ~/.oci
-          echo "$RAW_KEY" > ~/.oci/api_key.pem
-          chmod 600 ~/.oci/api_key.pem
-          
-          cat << 'EOF' > ~/.oci/config
-          [DEFAULT]
-          user=ocid1.user.oc1..aaaaaaaavhodc4li4cbn465epajsmlhrqlgnl5bhzek2p3ruotuuqfqsk2qq
-          fingerprint=1b:50:d2:34:b2:c1:05:05:6c:47:4f:3a:66:e6:bd:55
-          tenancy=ocid1.tenancy.oc1..aaaaaaaajpyefe3wmwguew5lipebb66etskt4tilonv4opiapcg6lwtn6opa
-          region=ap-mumbai-1
-          key_file=/home/runner/.oci/api_key.pem
-          EOF
-          chmod 600 ~/.oci/config
-
-      - name: 2. Forge New Room Key & Lock
-        run: |
-          ssh-keygen -t rsa -b 4096 -f zoya_key -N ""
-          echo "================================================="
-          echo "🚨 SAVE THIS PRIVATE KEY IN YOUR PHONE NOTES 🚨"
-          echo "================================================="
-          cat zoya_key
-          echo "================================================="
-          PUB_KEY=$(cat zoya_key.pub)
-          echo "NEW_LOCK<<EOF" >> $GITHUB_ENV
-          echo "$PUB_KEY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: 3. Append New Lock via Python
-        env:
-          NEW_LOCK: ${{ env.NEW_LOCK }}
-        run: |
-          python3 - << 'PY_EOF'
-          import oci
-          import os
-
-          config = oci.config.from_file()
-          compute_client = oci.core.ComputeClient(config)
-          instance_id = "ocid1.instance.oc1.ap-mumbai-1.anrg6ljrijjqvbic2cd2egj5ln4d53ix3zdumslbe7am27ohxbegaytlnwca"
-
-          instance = compute_client.get_instance(instance_id).data
-          metadata = dict(instance.metadata) if instance.metadata else {}
-          
-          existing_keys = metadata.get("ssh_authorized_keys", "")
-          new_lock = os.environ["NEW_LOCK"]
-          
-          if existing_keys:
-              metadata["ssh_authorized_keys"] = existing_keys + "\n" + new_lock
-          else:
-              metadata["ssh_authorized_keys"] = new_lock
-
-          update_details = oci.core.models.UpdateInstanceDetails(metadata=metadata)
-          compute_client.update_instance(instance_id, update_details)
-          print("Successfully appended new SSH authorized key via Python SDK!")
-          PY_EOF
-
-      - name: 4. Enter Room & Install Zoya
-        run: |
-          sleep 30
-          chmod 600 zoya_key
-          ssh -o StrictHostKeyChecking=no -i zoya_key ubuntu@80.225.246.245 << 'SSH_EOF'
-            echo "=== Inside Server ==="
-            sudo apt-get update -y
-            curl -fsSL https://ollama.com/install.sh | sh
+          echo "Starting aggressive 30-second loop..."
+          # यह लूप लगातार चलता रहेगा
+          while true; do
+            echo "Requesting Oracle to create Zoya Server..."
+            oci resource-manager job create-apply-job \
+            --stack-id ${{ secrets.STACK_OCID }} \
+            --execution-plan-strategy AUTO_APPROVED || true
             
-            sudo mkdir -p /etc/systemd/system/ollama.service.d
-            cat << 'INNER_EOF' | sudo tee /etc/systemd/system/ollama.service.d/memory-limit.conf
-            [Service]
-            MemoryMax=21G
-            INNER_EOF
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable ollama
-            sudo systemctl restart ollama
-            
-            echo "Pulling Qwen-2.5-32B Model..."
-            ollama pull qwen2.5:32b
-            echo "✅ ZOYA IS ONLINE."
-          SSH_EOF
+            echo "Sleeping for 30 seconds..."
+            sleep 30
+          done
           
