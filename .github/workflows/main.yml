@@ -1,8 +1,8 @@
 name: Oracle Auto Provision Zoya
 on:
   schedule:
-    - cron: '0 */6 * * *' # हर 6 घंटे में नया लूप शुरू करेगा
-  workflow_dispatch: # मैनुअल स्टार्ट बटन
+    - cron: '0 */6 * * *' # Har 6 ghante mein naya loop shuru karega
+  workflow_dispatch: # Manual start button
 
 jobs:
   create-server:
@@ -16,16 +16,28 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Setup OCI CLI
-        uses: oracle-actions/setup-oci-cli@v1.1.1
-        with:
-          tenancy: ${{ secrets.OCI_TENANCY }}
-          user: ${{ secrets.OCI_USER }}
-          fingerprint: ${{ secrets.OCI_FINGERPRINT }}
-          private_key: ${{ secrets.OCI_API_KEY }}
-          region: ${{ secrets.OCI_REGION }}
+      - name: Install and Configure OCI CLI
+        run: |
+          # PIP ke zariye OCI CLI install karna
+          pip install oci-cli
+          
+          # OCI Config setup karna
+          mkdir -p ~/.oci
+          cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${{ secrets.OCI_USER }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+          
+          # Private Key file generate karna
+          echo "${{ secrets.OCI_API_KEY }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
 
       - name: Run Python Script (Hit every 30 seconds)
         env:
           STACK_OCID: ${{ secrets.STACK_OCID }}
         run: python main.py
+        
