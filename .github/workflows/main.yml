@@ -1,8 +1,8 @@
 name: Oracle Auto Provision Zoya (Pro)
 on:
   schedule:
-    - cron: '0 */5 * * *' # Har 5 ghante mein loop restart karega
-  workflow_dispatch: # Manual start button
+    - cron: '0 */5 * * *'
+  workflow_dispatch:
 
 jobs:
   create-server:
@@ -23,10 +23,10 @@ jobs:
         run: |
           mkdir -p ~/.oci
           
-          # Config file banana (Yahan OCIUSER use kiya hai)
+          # Config file banana (Ab OCI_USER use kiya hai)
           cat <<EOF > ~/.oci/config
           [DEFAULT]
-          user=${{ secrets.OCIUSER }}
+          user=${{ secrets.OCI_USER }}
           fingerprint=${{ secrets.OCI_FINGERPRINT }}
           tenancy=${{ secrets.OCI_TENANCY }}
           region=${{ secrets.OCI_REGION }}
@@ -41,3 +41,4 @@ jobs:
         env:
           STACK_OCID: ${{ secrets.STACK_OCID }}
         run: python zoya.py
+        
