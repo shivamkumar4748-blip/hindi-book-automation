@@ -1,0 +1,43 @@
+name: Oracle Auto Provision Zoya (Pro)
+on:
+  schedule:
+    - cron: '0 */5 * * *' # Har 5 ghante mein loop restart karega
+  workflow_dispatch: # Manual start button
+
+jobs:
+  create-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install OCI SDK
+        run: pip install oci
+
+      - name: Setup OCI Config
+        run: |
+          mkdir -p ~/.oci
+          
+          # Config file banana (Yahan OCIUSER use kiya hai)
+          cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${{ secrets.OCIUSER }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=/home/runner/.oci/oci_api_key.pem
+          EOF
+          
+          # Private Key file banana
+          printf "%s\n" "${{ secrets.OCI_API_KEY }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          
+      - name: Run Zoya Python Script
+        env:
+          STACK_OCID: ${{ secrets.STACK_OCID }}
+        run: python zoya.py
